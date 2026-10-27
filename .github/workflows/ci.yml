@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SF_DISABLE_TELEMETRY: "true"
+  SF_SKIP_NEW_VERSION_CHECK: "true"
+  SF_DISABLE_COLORS: "true"
+
+jobs:
+  static:
+    name: Lint and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run prettier:verify
+      - run: npm run test:unit:coverage
+      - run: npm run test:scripts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jest-coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  # A Developer Edition Dev Hub allows 3 active and 6 daily scratch orgs:
+  # this job only runs on main and on demand, one at a time, and always deletes its org.
+  scratch-org:
+    name: Scratch org proof
+    needs: static
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: scratch-org
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate Dev Hub (JWT)
+        env:
+          SF_DEVHUB_JWT_KEY: ${{ secrets.SF_DEVHUB_JWT_KEY }}
+          SF_DEVHUB_CLIENT_ID: ${{ secrets.SF_DEVHUB_CLIENT_ID }}
+          SF_DEVHUB_USERNAME: ${{ secrets.SF_DEVHUB_USERNAME }}
+        run: |
+          key_file="$RUNNER_TEMP/devhub.key"
+          printf '%s\n' "$SF_DEVHUB_JWT_KEY" > "$key_file"
+          sf org login jwt --client-id "$SF_DEVHUB_CLIENT_ID" --jwt-key-file "$key_file" \
+            --username "$SF_DEVHUB_USERNAME" --alias devhub --set-default-dev-hub
+          rm -f "$key_file"
+
+      - name: Create scratch org
+        run: sf org create scratch --definition-file config/project-scratch-def.json --alias ci --duration-days 1 --wait 20 --set-default
+
+      - name: Deploy
+        run: sf project deploy start --target-org ci --wait 30
+
+      - name: Assign permission set
+        run: sf org assign permset --name Demo_Admin --target-org ci
+
+      - name: Apex tests
+        run: |
+          set -o pipefail
+          mkdir -p test-results
+          sf apex run test --target-org ci --test-level RunLocalTests --code-coverage \
+            --result-format human --output-dir test-results/apex --wait 30 | tee test-results/apex-summary.txt
+          {
+            echo '## Apex tests'
+            echo '```'
+            grep -E '^(Outcome|Tests Ran|Pass Rate|Fail Rate|Org Wide Coverage)' test-results/apex-summary.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run demos and export metrics
+        run: node scripts/run-demos.js --target-org ci --out scripts/out
+
+      - name: Capture panel with Playwright
+        run: |
+          npx playwright install --with-deps chromium
+          url=$(sf org open --target-org ci --path /lightning/n/Demo_Panel --url-only --json | jq -r '.result.url')
+          echo "::add-mask::$url"
+          SF_FRONTDOOR_URL="$url" SCREENSHOT_DIR=docs/screenshots/limits-probe npx playwright test
+
+      - name: Convert recording to GIF
+        if: always()
+        run: |
+          video=$(find test-results/e2e -name '*.webm' | head -n 1)
+          if [ -n "$video" ]; then
+            sudo apt-get install -y ffmpeg > /dev/null
+            ffmpeg -loglevel error -y -i "$video" -vf "fps=8,scale=960:-1:flags=lanczos" -loop 0 docs/screenshots/limits-probe/limits-probe.gif
+          fi
+
+      - name: Stamp captures
+        if: always()
+        run: |
+          mkdir -p docs/screenshots
+          printf 'commit=%s\nrun=%s/%s/actions/runs/%s\ndate=%s\n' "$GITHUB_SHA" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$(date -u +%FT%TZ)" > docs/screenshots/PROVENANCE.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: proof-${{ github.sha }}
+          path: |
+            scripts/out/
+            test-results/
+            docs/screenshots/
+            playwright-report/
+          if-no-files-found: warn
+
+      - name: Delete scratch org
+        if: always()
+        run: sf org delete scratch --target-org ci --no-prompt || true

@@ -1,0 +1,198 @@
+<template>
+  <lightning-card title="Salesforce demo panel" icon-name="standard:process">
+    <div class="slds-p-horizontal_medium">
+      <template lwc:if={streamingError}>
+        <div
+          class="slds-notify slds-notify_alert slds-alert_warning slds-m-bottom_small"
+          role="alert"
+          data-id="streaming-error"
+        >
+          {streamingError}
+        </div>
+      </template>
+      <template lwc:if={demosError}>
+        <div
+          class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small"
+          role="alert"
+          data-id="demos-error"
+        >
+          {demosError}
+        </div>
+      </template>
+
+      <div class="slds-grid slds-wrap slds-gutters">
+        <section
+          class="slds-col slds-size_1-of-1 slds-large-size_1-of-3"
+          aria-label="Demos"
+        >
+          <template lwc:if={hasDemos}>
+            <template for:each={demoCards} for:item="demo">
+              <article
+                key={demo.name}
+                class="slds-box slds-m-bottom_small"
+                data-id="demo-card"
+                data-demo={demo.name}
+              >
+                <h2 class="slds-text-heading_small slds-m-bottom_x-small">
+                  {demo.label}
+                </h2>
+                <p class="slds-text-body_small slds-m-bottom_small">
+                  {demo.description}
+                </p>
+                <lightning-input
+                  type="number"
+                  data-id="volume-input"
+                  label={demo.volumeLabel}
+                  min="1"
+                  max={demo.maxVolume}
+                  value={demo.volume}
+                  data-demo={demo.name}
+                  onchange={handleVolumeChange}
+                ></lightning-input>
+                <lightning-input
+                  type="toggle"
+                  data-id="chaos-toggle"
+                  label="Chaos (inject a failure)"
+                  checked={demo.chaos}
+                  data-demo={demo.name}
+                  message-toggle-active="On"
+                  message-toggle-inactive="Off"
+                  onchange={handleChaosChange}
+                  class="slds-m-vertical_x-small"
+                ></lightning-input>
+                <div class="slds-button-group" role="group">
+                  <lightning-button
+                    label="Run BEFORE"
+                    title={demo.beforeLabel}
+                    variant="destructive-text"
+                    data-demo={demo.name}
+                    data-mode="BEFORE"
+                    disabled={isRunning}
+                    onclick={handleRun}
+                  ></lightning-button>
+                  <lightning-button
+                    label="Run AFTER"
+                    title={demo.afterLabel}
+                    variant="brand"
+                    data-demo={demo.name}
+                    data-mode="AFTER"
+                    disabled={isRunning}
+                    onclick={handleRun}
+                  ></lightning-button>
+                </div>
+              </article>
+            </template>
+          </template>
+          <template lwc:else>
+            <p class="slds-text-color_weak" data-id="no-demos">
+              No active demo.
+            </p>
+          </template>
+        </section>
+
+        <section
+          class="slds-col slds-size_1-of-1 slds-large-size_2-of-3"
+          aria-label="Current run"
+          data-id="active-run"
+        >
+          <template lwc:if={hasActiveRun}>
+            <div
+              class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small"
+            >
+              <h2 class="slds-text-heading_small slds-m-right_small">
+                {activeRun.label} · {activeRun.mode} · volume {activeRun.volume}
+              </h2>
+              <span class={statusClass} data-id="run-status"
+                >{activeRun.status}</span
+              >
+              <template lwc:if={isRunning}>
+                <lightning-spinner
+                  alternative-text="Running"
+                  size="small"
+                  class="slds-is-relative slds-m-left_small"
+                ></lightning-spinner>
+              </template>
+            </div>
+            <div
+              class="slds-grid slds-wrap slds-grid_align-spread slds-m-bottom_small"
+            >
+              <c-limit-gauge
+                label="SOQL queries"
+                value={activeMetrics.soqlQueries}
+                max={soqlLimit}
+                data-id="gauge-soql"
+              ></c-limit-gauge>
+              <c-limit-gauge
+                label="DML statements"
+                value={activeMetrics.dmlStatements}
+                max={dmlLimit}
+                data-id="gauge-dml"
+              ></c-limit-gauge>
+              <c-limit-gauge
+                label="CPU time (ms)"
+                value={activeMetrics.cpuTimeMs}
+                max={cpuLimit}
+                data-id="gauge-cpu"
+              ></c-limit-gauge>
+            </div>
+            <c-progress-bar
+              label="Records processed"
+              value={activeMetrics.recordsProcessed}
+              max={activeRun.volume}
+              failed={isFailed}
+              class="slds-m-bottom_small"
+            ></c-progress-bar>
+            <template lwc:if={activeRun.error}>
+              <div
+                class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small"
+                role="alert"
+                data-id="run-error"
+              >
+                {activeRun.error}
+              </div>
+            </template>
+            <c-step-timeline
+              label="Run steps"
+              steps={activeRun.steps}
+              empty-text="Waiting for the first step..."
+            ></c-step-timeline>
+          </template>
+          <template lwc:else>
+            <p class="slds-text-color_weak" data-id="no-run">
+              Pick a demo and run it in BEFORE then AFTER mode.
+            </p>
+          </template>
+        </section>
+      </div>
+
+      <section class="slds-m-top_medium" aria-label="Recent runs">
+        <h2 class="slds-text-heading_small slds-m-bottom_x-small">
+          Recent runs
+        </h2>
+        <template lwc:if={runsError}>
+          <div
+            class="slds-notify slds-notify_alert slds-alert_error"
+            role="alert"
+            data-id="runs-error"
+          >
+            {runsError}
+          </div>
+        </template>
+        <template lwc:if={hasRuns}>
+          <lightning-datatable
+            key-field="Id"
+            data={runs}
+            columns={columns}
+            hide-checkbox-column
+            data-id="runs-table"
+          ></lightning-datatable>
+        </template>
+        <template lwc:else>
+          <p class="slds-text-color_weak" data-id="no-runs">
+            No run recorded yet.
+          </p>
+        </template>
+      </section>
+    </div>
+  </lightning-card>
+</template>

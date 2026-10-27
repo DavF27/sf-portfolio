@@ -1,0 +1,18 @@
+<template>
+  <div class="progress">
+    <div class="slds-grid slds-grid_align-spread slds-text-body_small">
+      <span data-id="label">{label}</span>
+      <span data-id="count">{safeValue} / {safeMax}</span>
+    </div>
+    <div
+      class="progress__track"
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin="0"
+      aria-valuemax={safeMax}
+      aria-valuenow={safeValue}
+    >
+      <div class={barClass} style={barStyle}></div>
+    </div>
+  </div>
+</template>

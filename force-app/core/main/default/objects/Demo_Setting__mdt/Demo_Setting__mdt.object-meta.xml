@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description
+  >One record per demo: strategy classes for BEFORE/AFTER modes, seeder and volume bounds.</description>
+    <label>Demo Setting</label>
+    <pluralLabel>Demo Settings</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

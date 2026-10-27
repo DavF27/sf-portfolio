@@ -1,0 +1,34 @@
+<template>
+  <div
+    class="gauge"
+    role="meter"
+    aria-label={label}
+    aria-valuemin="0"
+    aria-valuemax={safeMax}
+    aria-valuenow={safeValue}
+    aria-valuetext={valueText}
+  >
+    <svg
+      viewBox="0 0 120 70"
+      class="gauge__svg"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        class="gauge__track"
+        d="M 10 60 A 50 50 0 0 1 110 60"
+        pathLength="100"
+      ></path>
+      <path
+        class={arcClass}
+        d="M 10 60 A 50 50 0 0 1 110 60"
+        pathLength="100"
+        stroke-dasharray={dashArray}
+      ></path>
+    </svg>
+    <div class="gauge__value" data-id="value">{safeValue}</div>
+    <div class="gauge__label slds-text-body_small" data-id="label">
+      {label} <span class="slds-text-color_weak">/ {safeMax}</span>
+    </div>
+  </div>
+</template>

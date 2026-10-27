@@ -1,0 +1,33 @@
+{
+  "name": "sf-portfolio",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Executable Salesforce demonstrations: each demo has a failing BEFORE mode and a passing AFTER mode, measured in the org.",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint \"force-app/**/lwc/**/*.js\" \"scripts/**/*.js\" \"e2e/**/*.js\"",
+    "test": "npm run test:unit && npm run test:scripts",
+    "test:unit": "sfdx-lwc-jest",
+    "test:unit:coverage": "sfdx-lwc-jest --coverage",
+    "test:scripts": "node --test \"scripts/**/*.test.js\"",
+    "test:e2e": "playwright test",
+    "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    "prettier:verify": "prettier --check \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    "seed": "node scripts/seed.js",
+    "demos": "node scripts/run-demos.js"
+  },
+  "devDependencies": {
+    "@lwc/eslint-plugin-lwc": "^3.1.0",
+    "@playwright/test": "^1.55.0",
+    "@prettier/plugin-xml": "^3.4.1",
+    "@salesforce/eslint-config-lwc": "^4.0.0",
+    "@salesforce/eslint-plugin-lightning": "^2.0.0",
+    "@salesforce/sfdx-lwc-jest": "^7.0.2",
+    "eslint": "^9.29.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jest": "^28.14.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3",
+    "prettier-plugin-apex": "^2.2.6"
+  }
+}

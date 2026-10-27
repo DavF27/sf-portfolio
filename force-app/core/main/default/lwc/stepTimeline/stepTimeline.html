@@ -1,0 +1,34 @@
+<template>
+  <div aria-live="polite">
+    <template lwc:if={hasSteps}>
+      <ol class="timeline" aria-label={label}>
+        <template for:each={items} for:item="item">
+          <li key={item.key} class={item.cssClass} data-id="step">
+            <lightning-icon
+              icon-name={item.icon}
+              size="x-small"
+              alternative-text={item.phase}
+              class="timeline__icon"
+            ></lightning-icon>
+            <div class="timeline__body">
+              <p class="slds-text-title_bold">{item.label}</p>
+              <p class="slds-text-body_small slds-text-color_weak">
+                {item.detail}
+              </p>
+              <template lwc:if={item.message}>
+                <p class="slds-text-body_small timeline__message">
+                  {item.message}
+                </p>
+              </template>
+            </div>
+          </li>
+        </template>
+      </ol>
+    </template>
+    <template lwc:else>
+      <p class="slds-text-color_weak slds-text-body_small" data-id="empty">
+        {emptyText}
+      </p>
+    </template>
+  </div>
+</template>

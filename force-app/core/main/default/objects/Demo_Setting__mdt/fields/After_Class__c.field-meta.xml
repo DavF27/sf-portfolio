@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>After_Class__c</fullName>
+    <description
+  >Apex class implementing DemoStrategy for the fixed AFTER mode.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>After Strategy Class</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+</CustomField>

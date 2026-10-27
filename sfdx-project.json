@@ -1,0 +1,13 @@
+{
+  "packageDirectories": [
+    { "path": "force-app/core", "default": true },
+    { "path": "force-app/demo-bulk" },
+    { "path": "force-app/demo-order" },
+    { "path": "force-app/demo-async" },
+    { "path": "force-app/demo-batch" }
+  ],
+  "name": "sf-portfolio",
+  "namespace": "",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "66.0"
+}

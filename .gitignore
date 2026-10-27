@@ -1,0 +1,36 @@
+# Salesforce CLI
+.sf/
+.sfdx/
+.localdevserver/
+deploy-options.json
+
+# LWC / Jest
+**/jsconfig.json
+**/.eslintcache
+coverage/
+node_modules/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Generated data and metrics (published as CI artifacts, not committed)
+scripts/out/
+data/generated/
+
+# Secrets
+*.key
+*.pem
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json

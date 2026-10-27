@@ -1,0 +1,39 @@
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--slds-g-color-neutral-base-80, #c9c9c9);
+}
+
+.timeline__item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.25rem 0 0.5rem 0.5rem;
+  animation: timeline-in 0.3s ease-out;
+}
+
+.timeline__item_failed .timeline__message {
+  color: var(--slds-g-color-error-base-40, #ba0517);
+}
+
+.timeline__item_succeeded .slds-text-title_bold {
+  color: var(--slds-g-color-success-base-40, #22683e);
+}
+
+@keyframes timeline-in {
+  from {
+    opacity: 0;
+    transform: translateX(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline__item {
+    animation: none;
+  }
+}

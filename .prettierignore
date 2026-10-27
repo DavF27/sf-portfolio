@@ -1,0 +1,11 @@
+**/staticresources/**
+.localdevserver
+.sfdx
+.sf
+.vscode
+coverage/
+node_modules/
+test-results/
+playwright-report/
+scripts/out/
+docs/screenshots/

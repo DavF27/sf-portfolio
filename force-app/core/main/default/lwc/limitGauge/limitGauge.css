@@ -1,0 +1,46 @@
+.gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 8rem;
+}
+
+.gauge__svg {
+  width: 8rem;
+  height: 4.75rem;
+}
+
+.gauge__track,
+.gauge__arc {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.gauge__track {
+  stroke: var(--slds-g-color-neutral-base-90, #e5e5e5);
+}
+
+.gauge__arc {
+  transition:
+    stroke-dasharray 0.4s ease-out,
+    stroke 0.4s;
+}
+
+.gauge__arc_success {
+  stroke: var(--slds-g-color-success-base-50, #2e844a);
+}
+
+.gauge__arc_warning {
+  stroke: var(--slds-g-color-warning-base-60, #a96404);
+}
+
+.gauge__arc_error {
+  stroke: var(--slds-g-color-error-base-40, #ba0517);
+}
+
+.gauge__value {
+  margin-top: -2rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
