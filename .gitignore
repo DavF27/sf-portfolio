@@ -22,12 +22,17 @@ data/generated/
 # Secrets
 *.key
 *.pem
+*.crt
 .env
 .env.*
 
 # Logs
 *.log
 npm-debug.log*
+
+# Local AI assistant configuration (third-party rules, workstation-specific instructions)
+.github/skills/
+.github/copilot-instructions.md
 
 # OS / editors
 .DS_Store
