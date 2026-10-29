@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Bulk All-or-Nothing</label>
+    <protected>false</protected>
+    <values>
+        <field>Mode__c</field>
+        <value xsi:type="xsd:string">BEFORE</value>
+    </values>
+    <values>
+        <field>Before_Class__c</field>
+        <value xsi:type="xsd:string">BulkActivationStrategy</value>
+    </values>
+    <values>
+        <field>After_Class__c</field>
+        <value xsi:type="xsd:string">BulkActivationStrategy</value>
+    </values>
+    <values>
+        <field>Seeder_Class__c</field>
+        <value xsi:type="xsd:string">BulkActivationSeeder</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >One batch activates N contracts in a single trigger transaction; each contract activates its 2 deals, which fire 2 record-triggered flows. BEFORE queries and updates deals contract by contract: the cascade breaks the 100-query limit and every row of the batch fails. AFTER activates all deals with one query and one partial-success update. Chaos injects one deal with no amount.</value>
+    </values>
+    <values>
+        <field>Default_Volume__c</field>
+        <value xsi:type="xsd:double">50.0</value>
+    </values>
+    <values>
+        <field>Max_Volume__c</field>
+        <value xsi:type="xsd:double">200.0</value>
+    </values>
+    <values>
+        <field>Sort_Order__c</field>
+        <value xsi:type="xsd:double">1.0</value>
+    </values>
+    <values>
+        <field>Is_Active__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

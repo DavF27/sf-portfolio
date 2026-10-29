@@ -14,8 +14,9 @@ function quote(arg) {
 }
 
 /** Runs an sf CLI command with --json and returns the parsed output (even on a non-zero exit). */
-function sf(args) {
+function sf(args, { cwd } = {}) {
   const result = spawnSync("sf", [...args, "--json"].map(quote), {
+    cwd,
     encoding: "utf8",
     shell: isWindows,
     maxBuffer: 64 * 1024 * 1024,

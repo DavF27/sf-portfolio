@@ -1,0 +1,35 @@
+.grid {
+  margin: 0;
+}
+
+.grid__tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.grid__tile {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 2px;
+  background: var(--slds-g-color-neutral-base-90, #e5e5e5);
+  transition: background-color 0.25s ease-out;
+}
+
+.grid__tile_processing {
+  background: var(--slds-g-color-brand-base-50, #0176d3);
+}
+
+.grid__tile_succeeded {
+  background: var(--slds-g-color-success-base-50, #2e844a);
+}
+
+.grid__tile_failed {
+  background: var(--slds-g-color-error-base-40, #ba0517);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid__tile {
+    transition: none;
+  }
+}

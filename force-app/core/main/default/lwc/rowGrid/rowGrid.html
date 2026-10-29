@@ -1,0 +1,15 @@
+<template>
+  <figure class="grid" data-id="grid">
+    <div role="img" aria-label={summary} class="grid__tiles">
+      <template for:each={tiles} for:item="tile">
+        <span key={tile.key} class={tile.cssClass} title={tile.title}></span>
+      </template>
+    </div>
+    <figcaption
+      class="slds-text-body_small slds-m-top_x-small"
+      data-id="summary"
+    >
+      {summary}
+    </figcaption>
+  </figure>
+</template>

@@ -80,8 +80,8 @@ jobs:
       - name: Deploy
         run: sf project deploy start --target-org ci --wait 30
 
-      - name: Assign permission set
-        run: sf org assign permset --name Demo_Admin --target-org ci
+      - name: Assign permission sets
+        run: sf org assign permset --name Demo_Admin --name Demo_Bulk --target-org ci
 
       - name: Apex tests
         run: |
@@ -99,20 +99,26 @@ jobs:
       - name: Run demos and export metrics
         run: node scripts/run-demos.js --target-org ci --out scripts/out
 
+      - name: Run real Bulk API jobs
+        run: node scripts/bulk-demo.js --target-org ci --volume 50 --with-chaos --out scripts/out
+
       - name: Capture panel with Playwright
         run: |
           npx playwright install --with-deps chromium
           url=$(sf org open --target-org ci --path /lightning/n/Demo_Panel --url-only --json | jq -r '.result.url')
           echo "::add-mask::$url"
-          SF_FRONTDOOR_URL="$url" SCREENSHOT_DIR=docs/screenshots/limits-probe npx playwright test
+          SF_FRONTDOOR_URL="$url" SCREENSHOT_ROOT=docs/screenshots npx playwright test
 
-      - name: Convert recording to GIF
+      - name: Convert recordings to GIF
         if: always()
         run: |
-          video=$(find test-results/e2e -name '*.webm' | head -n 1)
-          if [ -n "$video" ]; then
+          shopt -s nullglob
+          videos=(docs/screenshots/*/*.webm)
+          if [ ${#videos[@]} -gt 0 ]; then
             sudo apt-get install -y ffmpeg > /dev/null
-            ffmpeg -loglevel error -y -i "$video" -vf "fps=8,scale=960:-1:flags=lanczos" -loop 0 docs/screenshots/limits-probe/limits-probe.gif
+            for video in "${videos[@]}"; do
+              ffmpeg -loglevel error -y -i "$video" -vf "fps=8,scale=960:-1:flags=lanczos" -loop 0 "${video%.webm}.gif"
+            done
           fi
 
       - name: Stamp captures

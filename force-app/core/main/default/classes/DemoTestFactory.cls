@@ -58,6 +58,11 @@ public class DemoTestFactory {
 
   /** User holding Demo_Admin: required by the WITH USER_MODE queries (FLS comes from the permission set only). */
   public static User demoUser() {
+    return demoUser(new List<String>{ 'Demo_Admin' });
+  }
+
+  /** Demo runner holding the given permission sets (each demo package ships its own). */
+  public static User demoUser(List<String> permissionSetNames) {
     String unique = UUID.randomUUID().toString().left(8);
     User demoUser = new User(
       ProfileId = UserInfo.getProfileId(),
@@ -71,11 +76,25 @@ public class DemoTestFactory {
       LanguageLocaleKey = 'en_US'
     );
     insert demoUser;
-    insert new PermissionSetAssignment(
-      AssigneeId = demoUser.Id,
-      PermissionSetId = [SELECT Id FROM PermissionSet WHERE Name = 'Demo_Admin']
-      .Id
+    List<PermissionSetAssignment> assignments = new List<PermissionSetAssignment>();
+    for (PermissionSet permissionSet : [
+      SELECT Id
+      FROM PermissionSet
+      WHERE Name IN :permissionSetNames
+    ]) {
+      assignments.add(
+        new PermissionSetAssignment(
+          AssigneeId = demoUser.Id,
+          PermissionSetId = permissionSet.Id
+        )
+      );
+    }
+    Assert.areEqual(
+      permissionSetNames.size(),
+      assignments.size(),
+      'Missing permission set among ' + permissionSetNames
     );
+    insert assignments;
     return demoUser;
   }
 

@@ -10,6 +10,9 @@ public with sharing class DemoResult {
   public String asyncJobId;
   @AuraEnabled
   public String message;
+  /** 1-based positions of the rows that failed, for the panel row grid. */
+  @AuraEnabled
+  public List<Integer> failedRows = new List<Integer>();
 
   public DemoResult() {
     this(0, 0);

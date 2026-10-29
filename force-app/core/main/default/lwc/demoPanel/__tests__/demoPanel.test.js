@@ -189,7 +189,7 @@ describe("c-demo-panel", () => {
         cpuTimeMs: 15,
         ...LIMITS
       },
-      result: { recordsProcessed: 50, recordsFailed: 0 }
+      result: { recordsProcessed: 50, recordsFailed: 1, failedRows: [25] }
     });
     await flushPromises();
     jestMockPublish(
@@ -205,6 +205,10 @@ describe("c-demo-panel", () => {
     expect(gauge(element, "gauge-dml").max).toBe(150);
     expect(gauge(element, "gauge-cpu").value).toBe(15);
     expect(element.shadowRoot.querySelector("c-progress-bar").value).toBe(50);
+    const rowGrid = element.shadowRoot.querySelector('[data-id="row-grid"]');
+    expect(rowGrid.total).toBe(50);
+    expect(rowGrid.failedRows).toEqual([25]);
+    expect(rowGrid.status).toBe("Succeeded");
     expect(
       element.shadowRoot.querySelector('[data-id="run-error"]')
     ).toBeNull();
@@ -249,6 +253,9 @@ describe("c-demo-panel", () => {
       element.shadowRoot.querySelector('[data-id="run-error"]').textContent
     ).toContain("Too many SOQL queries: 101");
     expect(gauge(element, "gauge-soql").value).toBe(101);
+    const failedGrid = element.shadowRoot.querySelector('[data-id="row-grid"]');
+    expect(failedGrid.status).toBe("Failed");
+    expect(failedGrid.total).toBe(150);
     expect(element.shadowRoot.querySelector("c-progress-bar").failed).toBe(
       true
     );

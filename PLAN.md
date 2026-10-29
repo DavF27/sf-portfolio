@@ -129,6 +129,8 @@ Le portfolio doit **se voir**, pas seulement se lire. Principe : les visuels son
 
 État au 2026-10-29 : CI verte de bout en bout. Défauts relevés sur les premières captures et corrigés : jauge DML « / 1 » (`getLimits` était `cacheable=true`, contexte en lecture seule où la plateforme annonce une limite DML de 1 ; désormais appel impératif, puis limites de la transaction du run) ; barre utilitaire figée au milieu des captures pleine page (masquée par géométrie avant capture) ; durée des runs en échec non intercepté écrasée par les horodatages des événements, précis à la seconde (désormais en dernier recours seulement).
 
+Vitrine : socle déployé dans `portfolio` le 2026-10-29 (déploiement `0Afak00000qKWQoCAO`, 91 composants, 47 tests Apex, 0 erreur), permission set `Demo_Admin` attribuée ; panneau affiché sur l'onglet _Demo Panel_ (vérifié par chargement headless, sans lancer de démo). Quatrième défaut corrigé au passage : les étapes reçues pendant l'enregistrement d'un échec non intercepté étaient écrasées (`0a16268`, test de non-régression qui échoue sur l'ancien code).
+
 **Preuve :** CI verte publique, panneau visible dans la vitrine, première capture générée par la CI.
 
 ### Phase 2 — Démo « Lot Bulk tout-ou-rien »

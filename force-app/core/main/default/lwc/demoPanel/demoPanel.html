@@ -142,6 +142,15 @@
               failed={isFailed}
               class="slds-m-bottom_small"
             ></c-progress-bar>
+            <c-row-grid
+              label="Rows of the batch"
+              total={activeRun.volume}
+              processed={activeMetrics.recordsProcessed}
+              failed-rows={activeRun.failedRows}
+              status={activeRun.status}
+              data-id="row-grid"
+              class="slds-m-bottom_small"
+            ></c-row-grid>
             <template lwc:if={activeRun.error}>
               <div
                 class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_small"

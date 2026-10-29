@@ -14,34 +14,11 @@ const path = require("node:path");
 const { runAnonymousApex, query } = require("./lib/sf");
 const {
   buildRunApex,
-  buildUncaughtFailureApex,
   parseApexRun,
-  isTerminal,
   toMarkdown,
   parseArgs
 } = require("./lib/report");
-
-const RUN_FIELDS = [
-  "Run_Key__c",
-  "Demo__c",
-  "Mode__c",
-  "Status__c",
-  "Source__c",
-  "Volume__c",
-  "SOQL_Queries__c",
-  "DML_Statements__c",
-  "DML_Rows__c",
-  "CPU_Time_Ms__c",
-  "Duration_Ms__c",
-  "Records_Processed__c",
-  "Records_Failed__c",
-  "Step_Count__c",
-  "Error_Message__c"
-].join(", ");
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const { recordUncaughtFailure, waitForRuns } = require("./lib/runs");
 
 function loadDemos(targetOrg, onlyDemo) {
   const settings = query(
@@ -57,39 +34,9 @@ function executeRun(run, targetOrg) {
   const outcome = parseApexRun(runAnonymousApex(buildRunApex(run), targetOrg));
   if (!outcome.success) {
     // Uncatchable failure (e.g. System.LimitException): the transaction is gone, record it explicitly.
-    const recorded = parseApexRun(
-      runAnonymousApex(
-        buildUncaughtFailureApex(run, outcome.message),
-        targetOrg
-      )
-    );
-    if (!recorded.success) {
-      throw new Error(
-        `Could not record failure of ${run.demo} ${run.mode}: ${recorded.message}`
-      );
-    }
+    recordUncaughtFailure(run, outcome.message, targetOrg);
   }
   return outcome;
-}
-
-async function waitForRuns(runKeys, targetOrg, timeoutSeconds) {
-  const deadline = Date.now() + timeoutSeconds * 1000;
-  const keys = runKeys.map((key) => `'${key}'`).join(",");
-  let runs = [];
-  while (Date.now() < deadline) {
-    runs = query(
-      `SELECT ${RUN_FIELDS} FROM Demo_Run__c WHERE Run_Key__c IN (${keys})`,
-      targetOrg
-    );
-    if (runs.length === runKeys.length && runs.every(isTerminal)) {
-      return runs;
-    }
-    await sleep(3000);
-  }
-  const missing = runKeys.filter(
-    (key) => !runs.some((run) => run.Run_Key__c === key && isTerminal(run))
-  );
-  throw new Error(`Timed out waiting for Demo_Run__c: ${missing.join(", ")}`);
 }
 
 async function main() {
@@ -125,13 +72,10 @@ async function main() {
     }
   }
 
-  const runs = await waitForRuns(
+  const ordered = await waitForRuns(
     planned.map((run) => run.runKey),
     targetOrg,
     Number(args.timeout || 90)
-  );
-  const ordered = planned.map((run) =>
-    runs.find((record) => record.Run_Key__c === run.runKey)
   );
   const markdown = toMarkdown(ordered, {
     title: "Demo metrics (measured in the org)",

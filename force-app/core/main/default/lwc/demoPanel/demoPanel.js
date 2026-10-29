@@ -268,6 +268,7 @@ export default class DemoPanel extends LightningElement {
       ...this.activeRun,
       status: response.status,
       error: response.errorMessage,
+      failedRows: response.result?.failedRows || [],
       metrics: mergeMetrics(
         mergeMetrics(this.activeRun.metrics, response.metrics),
         response.result
