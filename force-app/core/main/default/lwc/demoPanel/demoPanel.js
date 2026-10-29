@@ -65,8 +65,21 @@ const RUN_COLUMNS = [
     type: "number",
     initialWidth: 80
   },
-  { label: "Error", fieldName: "Error_Message__c", wrapText: true }
+  { label: "Error", fieldName: "errorSummary", wrapText: true }
 ];
+
+const ERROR_SUMMARY_LENGTH = 160;
+
+/** First line of a platform error, shortened for the runs table (the full text stays in the record). */
+export function summarizeError(message) {
+  if (!message) {
+    return "";
+  }
+  const firstLine = String(message).split(/\r?\n/)[0].trim();
+  return firstLine.length > ERROR_SUMMARY_LENGTH
+    ? `${firstLine.slice(0, ERROR_SUMMARY_LENGTH - 1)}…`
+    : firstLine;
+}
 
 export function reduceError(error) {
   if (!error) {
@@ -182,7 +195,11 @@ export default class DemoPanel extends LightningElement {
 
   async loadRuns() {
     try {
-      this.runs = await getRecentRuns({ limitSize: RECENT_RUNS });
+      const runs = await getRecentRuns({ limitSize: RECENT_RUNS });
+      this.runs = runs.map((run) => ({
+        ...run,
+        errorSummary: summarizeError(run.Error_Message__c)
+      }));
       this.runsError = undefined;
     } catch (error) {
       this.runsError = reduceError(error);

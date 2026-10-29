@@ -26,7 +26,7 @@
         <field>Description__c</field>
         <value
       xsi:type="xsd:string"
-    >One batch activates N contracts in a single trigger transaction; each contract activates its 2 deals, which fire 2 record-triggered flows. BEFORE queries and updates deals contract by contract: the cascade breaks the 100-query limit and every row of the batch fails. AFTER activates all deals with one query and one partial-success update. Chaos injects one deal with no amount.</value>
+    >Activates N contracts in one trigger transaction; each activates 2 deals that fire 2 flows. BEFORE: a query and an update per contract, the cascade breaks a limit and every row fails. AFTER: one query, one partial update. Chaos: a deal without amount.</value>
     </values>
     <values>
         <field>Default_Volume__c</field>

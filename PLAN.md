@@ -33,6 +33,23 @@ Contraintes de plateforme :
   ([Limits Class](https://developer.salesforce.com/docs/atlas.en-us.apexref.meta/apexref/apex_methods_system_limits.htm)).
   Le publisher plafonne à 40 étapes de progression par run. Le quota quotidien de livraison d'événements en Developer Edition reste à vérifier.
 
+Contraintes découvertes en Phase 2 (mesurées, preuves dans la CI) :
+
+- un trigger déclenché par la **Bulk API** s'exécute avec les **limites asynchrones** : `SOQL_Limit__c` = 200 mesuré
+  (100 depuis le panneau). Un lot de 50 lignes qui casse en synchrone passe donc en Bulk : la démo Bulk réelle utilise 100 lignes ;
+- en **succès partiel** (Bulk API, `Database.update(…, false)`), la plateforme **rejoue le trigger** sur les lignes valides et les
+  **variables statiques survivent** entre les tentatives : une garde anti-récursion par `Set` statique sauterait ces lignes.
+  On garde sur la transition (Draft → Active) ;
+- les flows record-triggered s'exécutent **par tranche de 200 enregistrements** : leur coût suit le nombre de tranches, pas de lignes ;
+- une limite dépassée **dans un flow** pendant un DML Apex remonte en `DmlException` (`LIMIT_EXCEEDED`, interceptable),
+  pas en `LimitException` : la valeur exacte du compteur n'est pas dans le message, d'où une étape publiée par contrat ;
+- un flow qui met à jour un parent pendant le trigger de ce parent provoque `SELF_REFERENCE_FROM_TRIGGER` : les flows écrivent
+  dans un journal enfant ;
+- `update` en `USER_MODE` refuse un champ master-detail non reparentable présent sur l'enregistrement : mettre à jour des copies ;
+- `Demo_Setting__mdt.getAll()` tronque les champs texte long à **255 caractères** (test de garde dans `DemoCatalogTest`) ;
+- l'URL _frontdoor_ de `sf org open --url-only` est **à usage unique** : Playwright se connecte une fois (global setup) et réutilise la session ;
+- quota de scratch orgs atteint le 2026-10-29 (6 créations sur 24 h glissantes) : regrouper les push qui déclenchent la CI.
+
 ## Architecture
 
 ```
@@ -138,13 +155,29 @@ Vitrine : socle déployé dans `portfolio` le 2026-10-29 (déploiement `0Afak000
 Mécanisme : un lot Bulk API passe dans une seule transaction de trigger ; une cascade (trigger parent → mise à jour des enfants
 → flows) dépasse une limite et **toutes** les lignes du lot échouent.
 
-- [ ] Modèle : `Contract_Demo__c` (parent) → `Deal_Demo__c` (mis à jour à l'activation) + 2–3 flows record-triggered.
-- [ ] AVANT : requête dans la boucle / cascade non bulkifiée → `Too many SOQL queries: 101` sur un lot de 50.
-- [ ] APRÈS : traitement bulkifié + `Database.update(records, false)` avec journalisation des échecs partiels.
-- [ ] Script qui envoie un vrai job Bulk API (`sf data upsert bulk`) et lit le résultat du job.
-- [ ] Tests : lot de 200 avant (échec attendu) / après (succès), cas d'une ligne invalide isolée.
+- [x] Modèle : `Contract_Demo__c` (parent) → `Deal_Demo__c` (master-detail, mis à jour à l'activation, règle de validation)
+      → `Activation_Log_Demo__c` écrit par 2 flows record-triggered after-save sur Deal.
+- [x] AVANT (`ContractActivationBefore`) : requête et `update` des deals contrat par contrat, chaque DML relance les 2 flows (~3 SOQL et 3 DML par contrat).
+- [x] APRÈS (`ContractActivationAfter`) : une requête, un `Database.update(deals, false)`, `addError` sur la seule ligne en échec, échec journalisé
+      dans `Demo_Run__c` (`Records_Failed__c`, message) via `Demo_Step__e`.
+- [x] Mode choisi par ligne (`Processing_Mode__c` envoyé dans le CSV) : un job Bulk ne transporte pas de paramètre.
+- [x] Script `scripts/bulk-demo.js` : vrai job Bulk API 2.0 (`sf data upsert bulk`), lecture du résultat du job, jointure avec `Demo_Run__c`.
+- [x] Panneau : composant `rowGrid` (une tuile par ligne du lot).
+- [x] Tests : 200 contrats APRÈS (succès, coût par tranche de 200), AVANT extrapolé (`LimitException` non interceptable) → rupture avant 50 lignes,
+      ligne invalide isolée en APRÈS (199/1) et lot entier en échec en AVANT. 65 tests Apex, couverture 98 %, 100 % sur les classes de la démo.
 
-**Preuve :** avant = 50/50 échecs ; après = 50/50 succès ; nombre de SOQL avant/après dans `Demo_Run__c` et la CI.
+**Preuve** (CI [40899094782](https://github.com/DavF27/sf-portfolio/actions/runs/40899094782), commit `e9d8ebd`) :
+
+| Chemin                                     | Lignes | AVANT                                                                        | APRÈS                     | APRÈS + Chaos                               |
+| ------------------------------------------ | -----: | ---------------------------------------------------------------------------- | ------------------------- | ------------------------------------------- |
+| Vrai job Bulk API (async, limite SOQL 200) |    100 | ❌ 100/100 en échec, `Too many DML statements: 151` (SOQL 120/200)           | ✅ 100/100, 3 SOQL, 3 DML | ⚠️ 99/1, `Amount must be greater than zero` |
+| Panneau (synchrone, limite SOQL 100)       |     50 | ❌ 50/50 en échec, `LIMIT_EXCEEDED` dans un flow (SOQL 96/100 au contrat 32) | ✅ 50/50, 3 SOQL          | ⚠️ 49/1                                     |
+
+Captures `docs/screenshots/bulk-all-or-nothing/` (`before.png`, `after.png`, `chaos.png`, GIF) dans l'artefact `proof-<sha>`.
+Vitrine : déployée dans `portfolio` le 2026-10-29 (`0Afak00000qKii7CAC`, 131 composants, 65 tests), permission set `Demo_Bulk` attribuée.
+
+En attente du prochain run CI (quota de scratch orgs épuisé le 2026-10-29) : capture `chaos.png` corrigée (page défilée), description
+de la carte raccourcie sous 255 caractères, erreurs résumées dans le tableau des runs.
 
 ### Phase 3 — Démo « Ordre d'exécution trigger / flow »
 

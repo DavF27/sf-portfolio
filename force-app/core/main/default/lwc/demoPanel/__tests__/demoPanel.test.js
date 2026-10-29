@@ -2,7 +2,8 @@ import { createElement } from "lwc";
 import DemoPanel, {
   CHANNEL,
   extractLimitBreach,
-  reduceError
+  reduceError,
+  summarizeError
 } from "c/demoPanel";
 import {
   subscribe,
@@ -64,6 +65,15 @@ const RUNS = [
     Demo__c: "Limits_Probe",
     Mode__c: "AFTER",
     Status__c: "Succeeded"
+  },
+  {
+    Id: "a00000000000002AAA",
+    Name: "RUN-000002",
+    Demo__c: "Bulk_All_Or_Nothing",
+    Mode__c: "BEFORE",
+    Status__c: "Failed",
+    Error_Message__c:
+      "DemoException: All 50 rows of the batch failed\n\ncaused by: System.DmlException\nClass.X: line 1"
   }
 ];
 
@@ -126,9 +136,15 @@ describe("c-demo-panel", () => {
     expect(subscribe).toHaveBeenCalledWith(CHANNEL, -1, expect.any(Function));
     expect(onError).toHaveBeenCalled();
     expect(getRecentRuns).toHaveBeenCalledWith({ limitSize: 10 });
-    expect(
-      element.shadowRoot.querySelector('[data-id="runs-table"]').data
-    ).toEqual(RUNS);
+    const tableData = element.shadowRoot.querySelector(
+      '[data-id="runs-table"]'
+    ).data;
+    expect(tableData).toHaveLength(2);
+    expect(tableData[0].errorSummary).toBe("");
+    expect(tableData[1].errorSummary).toBe(
+      "DemoException: All 50 rows of the batch failed"
+    );
+    expect(tableData[1].Error_Message__c).toContain("caused by");
     expect(
       element.shadowRoot.querySelector('[data-id="no-run"]')
     ).not.toBeNull();
@@ -382,6 +398,14 @@ describe("c-demo-panel", () => {
 });
 
 describe("demoPanel helpers", () => {
+  it("summarizes errors to their first line, shortened", () => {
+    expect(summarizeError(undefined)).toBe("");
+    expect(summarizeError("first\r\nsecond")).toBe("first");
+    const long = summarizeError("x".repeat(400));
+    expect(long).toHaveLength(160);
+    expect(long.endsWith("…")).toBe(true);
+  });
+
   it("extracts the breached limit reported by the platform", () => {
     expect(extractLimitBreach("Too many DML statements: 151")).toEqual({
       field: "dmlStatements",

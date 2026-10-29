@@ -59,4 +59,23 @@ private class DemoCatalogTest {
 
     Assert.areEqual('LimitsProbeBeforeStrategy', probe.Before_Class__c);
   }
+
+  /** getAll() truncates long text fields to 255 characters: the panel would show a cut description. */
+  @IsTest
+  static void deployedDescriptionsFitWhatGetAllReturns() {
+    Test.startTest();
+    List<Demo_Setting__mdt> settings = [
+      SELECT DeveloperName, Description__c
+      FROM Demo_Setting__mdt
+    ];
+    Test.stopTest();
+
+    Assert.isFalse(settings.isEmpty());
+    for (Demo_Setting__mdt setting : settings) {
+      Assert.isTrue(
+        (setting.Description__c ?? '').length() <= 255,
+        setting.DeveloperName + ' description exceeds 255 characters'
+      );
+    }
+  }
 }

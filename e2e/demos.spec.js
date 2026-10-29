@@ -55,6 +55,8 @@ async function hideBottomDockedBars(page) {
 }
 
 async function fullPageCapture(page, dir, file) {
+  // A full-page capture of a scrolled page paints the fixed global header mid-image.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await hideBottomDockedBars(page);
   await page.screenshot({ path: path.join(dir, file), fullPage: true });
 }
