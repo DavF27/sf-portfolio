@@ -161,6 +161,12 @@ test("toMarkdown renders one row per run and escapes errors", () => {
   );
 });
 
+test("withLimit shows consumption next to the limit when known", () => {
+  assert.equal(report.withLimit(101, 100), "101 / 100");
+  assert.equal(report.withLimit(3, null), "3");
+  assert.equal(report.withLimit(null, 100), "");
+});
+
 test("parseArgs reads flags and values", () => {
   assert.deepEqual(
     report.parseArgs([

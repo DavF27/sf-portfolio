@@ -100,7 +100,7 @@ jobs:
         run: node scripts/run-demos.js --target-org ci --out scripts/out
 
       - name: Run real Bulk API jobs
-        run: node scripts/bulk-demo.js --target-org ci --volume 50 --with-chaos --out scripts/out
+        run: node scripts/bulk-demo.js --target-org ci --volume 100 --with-chaos --out scripts/out
 
       - name: Capture panel with Playwright
         run: |

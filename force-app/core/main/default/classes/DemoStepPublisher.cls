@@ -119,6 +119,8 @@ public with sharing class DemoStepPublisher {
       event.CPU_Time_Ms__c = snapshot.cpuTimeMs;
       event.Heap_Bytes__c = snapshot.heapBytes;
       event.Duration_Ms__c = snapshot.durationMs;
+      event.SOQL_Limit__c = snapshot.soqlLimit;
+      event.DML_Limit__c = snapshot.dmlStatementsLimit;
       metrics.beginOverhead();
     }
     Database.SaveResult result = EventBus.publish(event);

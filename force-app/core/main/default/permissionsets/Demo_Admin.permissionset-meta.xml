@@ -27,6 +27,11 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
+        <editable>false</editable>
+        <field>Demo_Run__c.DML_Limit__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>true</editable>
         <field>Demo_Run__c.DML_Rows__c</field>
         <readable>true</readable>
@@ -74,6 +79,11 @@
     <fieldPermissions>
         <editable>false</editable>
         <field>Demo_Run__c.Run_Key__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Demo_Run__c.SOQL_Limit__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

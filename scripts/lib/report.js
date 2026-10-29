@@ -88,6 +88,12 @@ function isTerminal(run) {
   return TERMINAL_STATUSES.includes(run?.Status__c);
 }
 
+/** "101 / 100": consumption next to the limit of the transaction that ran the demo. */
+function withLimit(value, limit) {
+  const formatted = formatNumber(value);
+  return formatted && limit ? `${formatted} / ${limit}` : formatted;
+}
+
 function formatNumber(value) {
   return value === null || value === undefined ? "" : String(value);
 }
@@ -108,7 +114,7 @@ function toMarkdown(runs, { title = "Demo metrics", commit, date } = {}) {
       .replace(/\r?\n/g, " ")
       .slice(0, 120);
     lines.push(
-      `| ${run.Demo__c} | ${run.Mode__c} | ${formatNumber(run.Volume__c)} | ${run.Status__c === "Succeeded" ? "✅" : "❌"} ${run.Status__c} | ${formatNumber(run.SOQL_Queries__c)} | ${formatNumber(run.DML_Statements__c)} | ${formatNumber(run.CPU_Time_Ms__c)} | ${formatNumber(run.Duration_Ms__c)} | ${formatNumber(run.Records_Processed__c)} | ${formatNumber(run.Records_Failed__c)} | ${error} |`
+      `| ${run.Demo__c} | ${run.Mode__c} | ${formatNumber(run.Volume__c)} | ${run.Status__c === "Succeeded" ? "✅" : "❌"} ${run.Status__c} | ${withLimit(run.SOQL_Queries__c, run.SOQL_Limit__c)} | ${withLimit(run.DML_Statements__c, run.DML_Limit__c)} | ${formatNumber(run.CPU_Time_Ms__c)} | ${formatNumber(run.Duration_Ms__c)} | ${formatNumber(run.Records_Processed__c)} | ${formatNumber(run.Records_Failed__c)} | ${error} |`
     );
   }
   return `${lines.join("\n")}\n`;
@@ -142,5 +148,6 @@ module.exports = {
   parseApexRun,
   isTerminal,
   toMarkdown,
+  withLimit,
   parseArgs
 };

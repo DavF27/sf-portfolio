@@ -17,6 +17,8 @@ const RUN_FIELDS = [
   "Volume__c",
   "Chaos__c",
   "SOQL_Queries__c",
+  "SOQL_Limit__c",
+  "DML_Limit__c",
   "DML_Statements__c",
   "DML_Rows__c",
   "CPU_Time_Ms__c",

@@ -22,6 +22,8 @@ private class DemoStepHandlerTest {
     Demo_Step__e start = event(runKey, DemoStepPublisher.PHASE_START, 1);
     Demo_Step__e step = event(runKey, DemoStepPublisher.PHASE_STEP, 2);
     step.SOQL_Queries__c = 40;
+    step.SOQL_Limit__c = 200;
+    step.DML_Limit__c = 150;
     step.Records_Processed__c = 25;
     Demo_Step__e done = event(runKey, DemoStepPublisher.PHASE_SUCCEEDED, 3);
     done.SOQL_Queries__c = 12; // lower value must not overwrite the peak
@@ -35,6 +37,12 @@ private class DemoStepHandlerTest {
     Demo_Run__c run = DemoTestFactory.findRun(runKey);
     Assert.areEqual(DemoStepHandler.STATUS_SUCCEEDED, run.Status__c);
     Assert.areEqual(40, run.SOQL_Queries__c);
+    Assert.areEqual(
+      200,
+      run.SOQL_Limit__c,
+      'Limit of the transaction that ran the demo'
+    );
+    Assert.areEqual(150, run.DML_Limit__c);
     Assert.areEqual(50, run.Records_Processed__c);
     Assert.areEqual(3, run.Step_Count__c);
     Assert.areEqual(321, run.Duration_Ms__c);

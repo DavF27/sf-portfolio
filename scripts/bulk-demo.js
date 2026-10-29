@@ -6,6 +6,8 @@
  *
  * Usage: node scripts/bulk-demo.js --target-org <alias> [--volume 50] [--with-chaos]
  *                                  [--out scripts/out] [--timeout 120]
+ * Default volume 100: triggers fired by the Bulk API get the asynchronous limit of 200 queries
+ * (measured in SOQL_Limit__c), so the BEFORE cascade needs more rows than in the panel to break.
  * Writes <out>/bulk.json and <out>/bulk.md; appends the table to $GITHUB_STEP_SUMMARY when set.
  * Writes demo data in the target org: never point it at an org without the demo-bulk package.
  */
@@ -47,6 +49,10 @@ function runJob(run, targetOrg, workDir) {
     targetOrg
   ]);
   const jobId = bulk.parseJobId(upsert);
+  const inline = bulk.inlineJobOutcome(upsert);
+  if (inline) {
+    return { jobId, ...inline };
+  }
 
   // Writes <jobId>-success-records.csv and <jobId>-failed-records.csv in workDir.
   const results = sf(
@@ -73,7 +79,7 @@ async function main() {
   if (!targetOrg) {
     throw new Error("--target-org is required");
   }
-  const volume = Number(args.volume || 50);
+  const volume = Number(args.volume || 100);
   const outDir = path.resolve(args.out || "scripts/out");
   const workDir = path.join(outDir, "bulk-jobs");
   fs.mkdirSync(workDir, { recursive: true });

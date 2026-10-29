@@ -93,6 +93,8 @@ public with sharing class DemoController {
         Records_Processed__c,
         Records_Failed__c,
         Step_Count__c,
+        SOQL_Limit__c,
+        DML_Limit__c,
         Error_Message__c,
         Started_At__c,
         Finished_At__c

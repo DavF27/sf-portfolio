@@ -46,6 +46,8 @@ public with sharing class DemoStepHandler {
         Records_Processed__c,
         Records_Failed__c,
         Step_Count__c,
+        SOQL_Limit__c,
+        DML_Limit__c,
         Error_Message__c,
         Async_Job_Id__c,
         Started_At__c,
@@ -143,6 +145,8 @@ public with sharing class DemoStepHandler {
       event.Records_Failed__c
     );
     run.Step_Count__c = maxOf(run.Step_Count__c, event.Sequence__c);
+    run.SOQL_Limit__c = maxOf(run.SOQL_Limit__c, event.SOQL_Limit__c);
+    run.DML_Limit__c = maxOf(run.DML_Limit__c, event.DML_Limit__c);
     run.Async_Job_Id__c = run.Async_Job_Id__c ?? event.Async_Job_Id__c;
 
     Boolean terminal =

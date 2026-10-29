@@ -35,6 +35,20 @@ test("buildCsv activates every contract with the mode and run key", () => {
 
 test("parseJobId reads the job from success and failure outputs", () => {
   assert.equal(
+    bulk.parseJobId({
+      status: 0,
+      result: {
+        jobInfo: {
+          id: "750cf00000LTKGzAAP",
+          state: "JobComplete",
+          numberRecordsFailed: 0
+        },
+        records: {}
+      }
+    }),
+    "750cf00000LTKGzAAP"
+  );
+  assert.equal(
     bulk.parseJobId({ status: 0, result: { jobId: "750A" } }),
     "750A"
   );
@@ -45,6 +59,14 @@ test("parseJobId reads the job from success and failure outputs", () => {
       data: { jobId: "750B", state: "JobComplete" }
     }),
     "750B"
+  );
+  assert.equal(
+    bulk.parseJobId({
+      status: 1,
+      message:
+        "Job 750cf00000LTKH0AAP has 100 failed records. Run sf data bulk results --job-id 750cf00000LTKH0AAP"
+    }),
+    "750cf00000LTKH0AAP"
   );
   assert.throws(
     () => bulk.parseJobId({ status: 1, message: "No org" }),
@@ -79,6 +101,43 @@ test("summarizeFailures returns sorted rows and the first error", () => {
   });
 });
 
+test("inlineJobOutcome reads counters and failures returned inline", () => {
+  const outcome = bulk.inlineJobOutcome({
+    status: 0,
+    result: {
+      jobInfo: {
+        id: "750A",
+        numberRecordsProcessed: 100,
+        numberRecordsFailed: 1
+      },
+      records: {
+        successfulResults: [],
+        failedResults: [
+          {
+            sf__Id: "",
+            sf__Error:
+              "FIELD_CUSTOM_VALIDATION_EXCEPTION:Deal CTR-00050-2: Amount must be greater than zero",
+            External_Id__c: "CTR-00050"
+          }
+        ],
+        unprocessedRecords: []
+      }
+    }
+  });
+  assert.deepEqual(outcome, {
+    results: { processedRecords: 100, successfulRecords: 99, failedRecords: 1 },
+    failures: {
+      failedRows: [50],
+      firstError:
+        "FIELD_CUSTOM_VALIDATION_EXCEPTION:Deal CTR-00050-2: Amount must be greater than zero"
+    }
+  });
+  assert.equal(
+    bulk.inlineJobOutcome({ status: 0, result: { jobId: "750B" } }),
+    null
+  );
+});
+
 test("isWholeBatchFailure distinguishes all-or-nothing from isolated failures", () => {
   assert.equal(
     bulk.isWholeBatchFailure({ processedRecords: 50, failedRecords: 50 }),
@@ -104,7 +163,7 @@ test("toBulkMarkdown renders one verdict per job", () => {
         succeeded: 0,
         failed: 50,
         firstError: "Too many | SOQL",
-        run: { SOQL_Queries__c: 101, Status__c: "Failed" }
+        run: { SOQL_Queries__c: 201, SOQL_Limit__c: 200, Status__c: "Failed" }
       },
       {
         mode: "AFTER",
@@ -127,7 +186,10 @@ test("toBulkMarkdown renders one verdict per job", () => {
     { commit: "abc", date: "2026-10-29" }
   );
   assert.match(markdown, /Commit `abc` · 2026-10-29/);
-  assert.match(markdown, /\| BEFORE \| no \| 50 \| 0 \| ❌ 50 \| 101 \|/);
+  assert.match(
+    markdown,
+    /\| BEFORE \| no \| 50 \| 0 \| ❌ 50 \| 201 \/ 200 \|/
+  );
   assert.match(markdown, /Too many \\\| SOQL/);
   assert.match(markdown, /\| AFTER \| no \| 50 \| 50 \| ✅ 0 \| 3 \|/);
   assert.match(markdown, /\| AFTER \| yes \| 50 \| 49 \| ⚠️ 1 \|/);
