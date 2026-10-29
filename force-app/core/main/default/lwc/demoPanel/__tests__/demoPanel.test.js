@@ -254,6 +254,36 @@ describe("c-demo-panel", () => {
     );
   });
 
+  it("keeps live steps that arrive while the uncaught failure is recorded", async () => {
+    runDemo.mockRejectedValue({
+      body: { message: "System.LimitException: Too many SOQL queries: 101" }
+    });
+    let resolveRecord;
+    recordUncaughtFailure.mockImplementation(
+      () => new Promise((resolve) => (resolveRecord = resolve))
+    );
+    const element = await renderPanel();
+
+    button(element, "BEFORE").click();
+    await flushPromises();
+    const { runKey } = runDemo.mock.calls[0][0];
+    jestMockPublish(
+      CHANNEL,
+      stepMessage(runKey, "STEP", {
+        Sequence__c: 11,
+        SOQL_Queries__c: 100,
+        CPU_Time_Ms__c: 119,
+        Records_Processed__c: 100
+      })
+    );
+    resolveRecord();
+    await flushPromises();
+
+    expect(gauge(element, "gauge-soql").value).toBe(101);
+    expect(gauge(element, "gauge-cpu").value).toBe(119);
+    expect(element.shadowRoot.querySelector("c-progress-bar").value).toBe(100);
+  });
+
   it("keeps the error visible when the failure cannot be recorded", async () => {
     runDemo.mockRejectedValue({
       body: { message: "Unknown or inactive demo: X" }

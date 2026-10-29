@@ -278,15 +278,18 @@ export default class DemoPanel extends LightningElement {
   async reportUncaughtFailure(request, message) {
     let error = message;
     const breach = extractLimitBreach(message);
-    const metrics = breach
-      ? mergeMetrics(this.activeRun.metrics, { [breach.field]: breach.value })
-      : this.activeRun.metrics;
     try {
       await recordUncaughtFailure({ ...request, message });
     } catch (recordError) {
       error = `${message} (not recorded: ${reduceError(recordError)})`;
     }
     if (this.activeRun?.runKey === request.runKey) {
+      // Merge after the await: live steps may have arrived in the meantime.
+      const metrics = breach
+        ? mergeMetrics(this.activeRun.metrics, {
+            [breach.field]: breach.value
+          })
+        : this.activeRun.metrics;
       this.activeRun = { ...this.activeRun, status: "Failed", error, metrics };
     }
   }
