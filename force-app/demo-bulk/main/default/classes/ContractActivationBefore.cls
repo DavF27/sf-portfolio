@@ -6,7 +6,8 @@
  * - an all-or-none update: one invalid deal throws, which also fails every row of the batch.
  */
 public with sharing class ContractActivationBefore implements ContractActivationService {
-  private static final Integer STEP_EVERY = 5;
+  // One step per contract: the gauges climb up to the breaking point (it breaks around 33).
+  private static final Integer STEP_EVERY = 1;
 
   public Map<Id, String> activate(
     List<Contract_Demo__c> contracts,

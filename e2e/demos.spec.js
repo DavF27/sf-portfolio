@@ -1,5 +1,6 @@
 // Captures every demo from the deployed panel: BEFORE, AFTER and, when relevant, AFTER with Chaos.
-// Requires SF_FRONTDOOR_URL (from `sf org open --url-only --path /lightning/n/Demo_Panel`).
+// Requires SF_FRONTDOOR_URL (from `sf org open --url-only --path /lightning/n/Demo_Panel`), consumed once
+// by e2e/global-setup.js which stores the session and the panel URL (SF_PANEL_URL).
 const { test, expect } = require("@playwright/test");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -19,7 +20,8 @@ const DEMOS = [
     name: "Bulk_All_Or_Nothing",
     slug: "bulk-all-or-nothing",
     volume: "50",
-    before: { status: "Failed", error: "Too many SOQL queries" },
+    // Synchronous transaction: the limit breaks inside a deal flow, reported as LIMIT_EXCEEDED.
+    before: { status: "Failed", error: /Limit Exceeded|Too many/ },
     after: { status: "Succeeded", summary: "50 succeeded, 0 failed" },
     chaos: { status: "Succeeded", summary: "49 succeeded, 1 failed" }
   }
@@ -78,7 +80,7 @@ for (const demo of DEMOS) {
     const dir = path.join(SCREENSHOT_ROOT, demo.slug);
     fs.mkdirSync(dir, { recursive: true });
 
-    await page.goto(process.env.SF_FRONTDOOR_URL);
+    await page.goto(process.env.SF_PANEL_URL);
     const card = page.locator(
       `[data-id="demo-card"][data-demo="${demo.name}"]`
     );
