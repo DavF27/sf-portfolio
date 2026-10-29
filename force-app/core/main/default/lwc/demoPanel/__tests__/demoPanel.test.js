@@ -26,10 +26,7 @@ jest.mock(
 );
 jest.mock(
   "@salesforce/apex/DemoController.getLimits",
-  () => {
-    const { createApexTestWireAdapter } = require("@salesforce/sfdx-lwc-jest");
-    return { default: createApexTestWireAdapter(jest.fn()) };
-  },
+  () => ({ default: jest.fn() }),
   { virtual: true }
 );
 jest.mock(
@@ -77,7 +74,6 @@ async function renderPanel() {
   const element = createElement("c-demo-panel", { is: DemoPanel });
   document.body.appendChild(element);
   getDemos.emit(DEMOS);
-  getLimits.emit(LIMITS);
   await flushPromises();
   return element;
 }
@@ -108,6 +104,7 @@ function stepMessage(runKey, phase, fields = {}) {
 describe("c-demo-panel", () => {
   beforeEach(() => {
     getRecentRuns.mockResolvedValue(RUNS);
+    getLimits.mockResolvedValue(LIMITS);
   });
 
   afterEach(() => {
@@ -142,6 +139,7 @@ describe("c-demo-panel", () => {
     runDemo.mockImplementation(
       () => new Promise((resolve) => (resolveRun = resolve))
     );
+    getLimits.mockResolvedValueOnce({ ...LIMITS, dmlStatementsLimit: 1 });
     const element = await renderPanel();
 
     button(element, "AFTER").click();
@@ -158,6 +156,7 @@ describe("c-demo-panel", () => {
       element.shadowRoot.querySelector('[data-id="run-status"]').textContent
     ).toBe("Running");
     expect(button(element, "BEFORE").disabled).toBe(true);
+    expect(gauge(element, "gauge-dml").max).toBe(1);
 
     jestMockPublish(
       CHANNEL,
@@ -184,7 +183,12 @@ describe("c-demo-panel", () => {
     resolveRun({
       runKey: request.runKey,
       status: "Succeeded",
-      metrics: { soqlQueries: 1, dmlStatements: 0, cpuTimeMs: 15 },
+      metrics: {
+        soqlQueries: 1,
+        dmlStatements: 0,
+        cpuTimeMs: 15,
+        ...LIMITS
+      },
       result: { recordsProcessed: 50, recordsFailed: 0 }
     });
     await flushPromises();
@@ -198,6 +202,7 @@ describe("c-demo-panel", () => {
       element.shadowRoot.querySelector('[data-id="run-status"]').textContent
     ).toBe("Succeeded");
     expect(gauge(element, "gauge-soql").max).toBe(100);
+    expect(gauge(element, "gauge-dml").max).toBe(150);
     expect(gauge(element, "gauge-cpu").value).toBe(15);
     expect(element.shadowRoot.querySelector("c-progress-bar").value).toBe(50);
     expect(
@@ -303,12 +308,13 @@ describe("c-demo-panel", () => {
   it("reports wire, streaming and recent runs errors", async () => {
     getRecentRuns.mockRejectedValue({ body: { message: "No access" } });
     subscribe.mockRejectedValueOnce(new Error("Streaming disabled"));
+    getLimits.mockRejectedValueOnce({ body: { message: "Limits failed" } });
     const element = createElement("c-demo-panel", { is: DemoPanel });
     document.body.appendChild(element);
     getDemos.error({ message: "Wire failed" });
-    getLimits.error({ message: "Limits failed" });
     await flushPromises();
 
+    expect(gauge(element, "gauge-soql")).toBeNull();
     expect(
       element.shadowRoot.querySelector('[data-id="demos-error"]')
     ).not.toBeNull();

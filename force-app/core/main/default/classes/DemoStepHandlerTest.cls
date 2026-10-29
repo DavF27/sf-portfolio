@@ -68,6 +68,27 @@ private class DemoStepHandlerTest {
   }
 
   @IsTest
+  static void keepsMeasuredDurationOnUncaughtFailure() {
+    String runKey = UUID.randomUUID().toString();
+    Demo_Step__e step = event(runKey, DemoStepPublisher.PHASE_STEP, 2);
+    step.Duration_Ms__c = 187;
+    Demo_Step__e failure = event(runKey, DemoStepPublisher.PHASE_FAILED, null);
+    failure.Message__c = 'System.LimitException: Too many SOQL queries: 101';
+
+    Test.startTest();
+    EventBus.publish(step);
+    Test.getEventBus().deliver();
+    EventBus.publish(failure);
+    Test.stopTest();
+
+    Assert.areEqual(
+      187,
+      DemoTestFactory.findRun(runKey).Duration_Ms__c,
+      'Second-precision timestamps must not override a measured duration'
+    );
+  }
+
+  @IsTest
   static void firstTerminalStatusWins() {
     String runKey = UUID.randomUUID().toString();
     Demo_Step__e failure = event(runKey, DemoStepPublisher.PHASE_FAILED, null);

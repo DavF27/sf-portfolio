@@ -22,6 +22,10 @@ private class DemoControllerTest {
 
     Assert.areEqual(Limits.getLimitQueries(), limitsSnapshot.soqlLimit);
     Assert.areEqual(Limits.getLimitCpuTime(), limitsSnapshot.cpuTimeLimit);
+    Assert.areEqual(
+      Limits.getLimitDmlStatements(),
+      limitsSnapshot.dmlStatementsLimit
+    );
   }
 
   @IsTest

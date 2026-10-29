@@ -14,7 +14,8 @@ public with sharing class DemoController {
   }
 
   /** Governor limits of a synchronous Apex transaction, as reported by the platform. */
-  @AuraEnabled(cacheable=true)
+  // Not cacheable: in a cacheable (read-only) context the platform reports a DML statement limit of 1.
+  @AuraEnabled
   public static DemoMetrics.Snapshot getLimits() {
     return new DemoMetrics().snapshot();
   }

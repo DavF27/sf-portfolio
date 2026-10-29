@@ -104,7 +104,7 @@ Le portfolio doit **se voir**, pas seulement se lire. Principe : les visuels son
 - [x] Connecter la Developer Edition (domaine `my.salesforce.com`, pas `lightning.force.com`) : `sf org login web --alias portfolio --instance-url https://<my-domain>.my.salesforce.com --set-default-dev-hub`
 - [x] Activer Dev Hub dans Setup de la Developer Edition. _(vérifié le 2026-10-27 : `SELECT COUNT() FROM ScratchOrgInfo` répond)_
 - [x] `target-org` et `target-dev-hub` en config **locale** du projet = `portfolio` (le `target-org` global pointe vers une sandbox client).
-- [ ] Créer le dépôt GitHub personnel `DavF27` (public ou privé jusqu'à la publication). ⚠️ `gh` est actuellement connecté à un compte professionnel : faire `gh auth login` sur `DavF27` avant.
+- [x] Créer le dépôt GitHub personnel `DavF27/sf-portfolio` (privé jusqu'à la publication). Les push passent par le jeton `gh` de `DavF27` (`GH_TOKEN`), sans changer le compte `gh` actif utilisé par l'autre fenêtre VS Code.
 
 **Preuve :** `sf org display --target-org portfolio` OK, `sf org list` montre le Dev Hub.
 
@@ -116,18 +116,18 @@ Le portfolio doit **se voir**, pas seulement se lire. Principe : les visuels son
 - [x] Panneau LWC `demoPanel` (liste des démos, boutons avant/après, tableau des derniers runs) + tests Jest.
 - [x] Générateur de données synthétiques paramétrable (volume) : `SyntheticDataGenerator` (déterministe), interface `DemoDataSeeder`, `scripts/seed.js`.
 - [x] Définition de scratch org `config/project-scratch-def.json`.
-- [ ] CI : authentification JWT au Dev Hub (secret GitHub) → scratch org → déploiement → tests Apex + Jest → export des métriques en artefact et dans le résumé du job → suppression de la scratch org.
-      _Écrite ([ci.yml](.github/workflows/ci.yml), procédure [docs/ci-setup.md](docs/ci-setup.md)) ; reste à créer l'app connectée, les secrets et le dépôt, puis à l'exécuter._
+- [x] CI : authentification JWT au Dev Hub (secret GitHub) → scratch org → déploiement → tests Apex + Jest → export des métriques en artefact et dans le résumé du job → suppression de la scratch org.
+      _Run [40883713530](https://github.com/DavF27/sf-portfolio/actions/runs/40883713530) (commit `c42022e`, 2026-10-29) : 46 tests Apex, 100 % de réussite, couverture 97 % ; scratch org créée puis supprimée. Contrainte : depuis Spring '26, la création de scratch org échoue en `C-1016` avec une app propre au Dev Hub (ECA ou Connected App) ; contournement officiel `SF_SCRATCH_SIGNUP_CONNECTED_APP=PlatformCLI` (voir [docs/ci-setup.md](docs/ci-setup.md))._
 
 - [x] Instrumentation commune : événement `Demo_Step__e` (Platform Event) publié par chaque étape, consommé par le panneau (`empApi`).
 - [x] Composants visuels réutilisables : jauges de limites, frise chronologique, barres de progression.
-- [ ] Playwright dans la CI : captures AVANT/APRÈS + GIF par démo, publiés en artefact. _Spec `e2e/limits-probe.spec.js` écrite, non exécutée (nécessite une org déployée)._
+- [x] Playwright dans la CI : captures AVANT/APRÈS + GIF par démo, publiés en artefact. _`Limits_Probe` : `panel.png`, `before.png`, `after.png`, `limits-probe.gif` dans l'artefact `proof-<sha>`. Métriques mesurées : AVANT 101 SOQL, échec `Too many SOQL queries: 101` ; APRÈS 1 SOQL, 150/150._
 - [x] Validation Apex dans une org : `sf project deploy validate --source-dir force-app/core --test-level RunLocalTests` sur `portfolio` (check-only, rien enregistré),
       validation `0Afak00000q0Yv3CAE` du 2026-10-27 : **46 tests, 0 échec, couverture 97,4 %**.
       Leçons : `WITH USER_MODE` impose la FLS, donc les tests tournent sous un utilisateur `Demo_Admin` (`DemoTestFactory.demoUser()`) ;
       `Assert.*` refuse un message `null` ; une FlexiPage sans parent n'accepte pas `<mode>Replace</mode>`.
 
-État local au 2026-10-27 : 20 tests Jest (couverture `demoPanel` 98 %), 10 tests de scripts, ESLint, Prettier et `sf project convert source` OK.
+État au 2026-10-29 : CI verte de bout en bout. Défauts relevés sur les premières captures et corrigés : jauge DML « / 1 » (`getLimits` était `cacheable=true`, contexte en lecture seule où la plateforme annonce une limite DML de 1 ; désormais appel impératif, puis limites de la transaction du run) ; barre utilitaire figée au milieu des captures pleine page (masquée par géométrie avant capture) ; durée des runs en échec non intercepté écrasée par les horodatages des événements, précis à la seconde (désormais en dernier recours seulement).
 
 **Preuve :** CI verte publique, panneau visible dans la vitrine, première capture générée par la CI.
 

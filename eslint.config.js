@@ -42,5 +42,12 @@ module.exports = defineConfig([
     },
     plugins: { eslintJs },
     extends: ["eslintJs/recommended"]
+  },
+  {
+    files: ["e2e/**/*.js"],
+    languageOptions: {
+      // page.evaluate() callbacks run in the browser
+      globals: { ...globals.browser }
+    }
   }
 ]);

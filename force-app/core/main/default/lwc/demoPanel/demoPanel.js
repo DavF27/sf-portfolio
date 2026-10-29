@@ -144,20 +144,12 @@ export default class DemoPanel extends LightningElement {
     }
   }
 
-  @wire(getLimits)
-  wiredLimits({ data, error }) {
-    if (data) {
-      this.limits = data;
-    } else if (error) {
-      this.limits = undefined;
-    }
-  }
-
   connectedCallback() {
     onError((error) => {
       this.streamingError = `Live progress unavailable: ${reduceError(error)}`;
     });
     this.subscribeToSteps();
+    this.loadLimits();
     this.loadRuns();
   }
 
@@ -175,6 +167,16 @@ export default class DemoPanel extends LightningElement {
       );
     } catch (error) {
       this.streamingError = `Live progress unavailable: ${reduceError(error)}`;
+    }
+  }
+
+  // Imperative on purpose: getLimits must not be cacheable (see DemoController.getLimits).
+  async loadLimits() {
+    try {
+      this.limits = await getLimits();
+    } catch {
+      // Gauges then use the limits returned with the first run.
+      this.limits = undefined;
     }
   }
 
@@ -257,6 +259,10 @@ export default class DemoPanel extends LightningElement {
   applyResponse(runKey, response) {
     if (!this.activeRun || this.activeRun.runKey !== runKey) {
       return;
+    }
+    if (response.metrics?.soqlLimit) {
+      // Limits of the transaction that actually ran the demo.
+      this.limits = response.metrics;
     }
     this.activeRun = {
       ...this.activeRun,

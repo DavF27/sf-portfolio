@@ -11,6 +11,39 @@ const SCREENSHOT_DIR =
 
 test.skip(!process.env.SF_FRONTDOOR_URL, "SF_FRONTDOOR_URL is not set");
 
+// Fixed bars docked at the bottom (e.g. the app utility bar) are painted mid-image in full-page captures.
+// Hidden by geometry rather than by Salesforce-internal class names, which are not a stable API.
+async function hideBottomDockedBars(page) {
+  const hidden = await page.evaluate(() => {
+    let count = 0;
+    for (const element of document.querySelectorAll("body *")) {
+      if (getComputedStyle(element).position !== "fixed") {
+        continue;
+      }
+      const rect = element.getBoundingClientRect();
+      const dockedAtBottom = rect.top > window.innerHeight / 2;
+      const isBar = rect.height > 0 && rect.height < window.innerHeight / 3;
+      if (dockedAtBottom && isBar) {
+        element.style.visibility = "hidden";
+        count++;
+      }
+    }
+    return count;
+  });
+  test.info().annotations.push({
+    type: "hidden-bottom-bars",
+    description: String(hidden)
+  });
+}
+
+async function fullPageCapture(page, file) {
+  await hideBottomDockedBars(page);
+  await page.screenshot({
+    path: path.join(SCREENSHOT_DIR, file),
+    fullPage: true
+  });
+}
+
 async function runMode(page, mode, expectedStatus) {
   const card = page.locator(`[data-id="demo-card"][data-demo="${DEMO}"]`);
   await card.locator(`lightning-button[data-mode="${mode}"] button`).click();
@@ -35,14 +68,8 @@ test("Limits Probe: BEFORE breaks the SOQL limit, AFTER passes", async ({
   await expect(page.locator('[data-id="run-error"]')).toContainText(
     "Too many SOQL queries: 101"
   );
-  await page.screenshot({
-    path: path.join(SCREENSHOT_DIR, "before.png"),
-    fullPage: true
-  });
+  await fullPageCapture(page, "before.png");
 
   await runMode(page, "AFTER", "Succeeded");
-  await page.screenshot({
-    path: path.join(SCREENSHOT_DIR, "after.png"),
-    fullPage: true
-  });
+  await fullPageCapture(page, "after.png");
 });
