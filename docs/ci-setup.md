@@ -27,29 +27,38 @@ Le certificat expire après 730 jours : il faudra alors le régénérer et le t�
 
 ## 2. Créer l'application dans le Dev Hub
 
-⚠️ Selon la [doc Salesforce CLI](https://developer.salesforce.com/docs/platform/sfdx-dev/guide/sfdx-dev-auth-eca.html), un Dev Hub
-qui **crée des scratch orgs** doit encore passer par une _Connected App_, pas par une _External Client App_ (ECA).
-Or, depuis Spring '26, la création de Connected Apps est désactivée par défaut.
+Une **Connected App** classique (App Manager → _New Connected App_ ; dans `portfolio` : `demo2`) :
 
-1. Setup → Quick Find `External Client Apps` → **Settings** : si le bouton **Allow creation of connected apps** est présent, l'activer
-   et créer une **Connected App** (App Manager → _New Connected App_) :
-   - _Enable OAuth Settings_, callback `http://localhost:1717/OauthRedirect` ;
-   - **Use digital signatures** → téléverser `devhub.crt` ;
-   - scopes `api`, `web`, `refresh_token, offline_access` ;
-   - _Manage_ → _Edit Policies_ → _Admin approved users are pre-authorized_ → _Manage Profiles_ : **System Administrator**.
-2. Sinon, créer une **External Client App** (App Manager → _New External Client App_), puis valider qu'elle permet de créer une scratch org (étape 3) :
-   - _Enable OAuth_, callback `http://localhost:1717/OauthRedirect`, mêmes scopes ;
-   - section **Flow Enablement** → cocher **Enable JWT Bearer Flow** : le champ de téléversement du certificat apparaît → `devhub.crt` ;
-   - _Create_, puis _Edit_ → onglet **Policies** → _Permitted Users_ = _Admin approved users are pre-authorized_,
-     et sélectionner le profil **System Administrator**.
+1. _Enable OAuth Settings_, callback `http://localhost:1717/OauthRedirect` ;
+2. juste en dessous, cocher **Use digital signatures** → _Choose File_ → `devhub.crt`. Sans certificat, le JWT échoue
+   avec `invalid assertion` ;
+3. scopes `api`, `web`, `refresh_token, offline_access` (pas _Full access_) ;
+4. _Save_, puis _Manage_ → _Edit Policies_ → _Permitted Users_ = **Admin approved users are pre-authorized** ;
+5. _Manage Profiles_ → **System Administrator** ;
+6. attendre une dizaine de minutes, le temps que l'app soit active.
 
-Récupérer la **Consumer Key** (onglet _Settings_ → _OAuth Settings_ → _Consumer Key and Secret_).
+Récupérer la **Consumer Key** (_Manage Consumer Details_). Le Consumer Secret ne sert pas au JWT.
 
-## 3. Vérifier en local
+Une External Client App convient aussi pour le JWT (_Flow Enablement_ → cocher le flux JWT → téléverser `devhub.crt`).
 
-```powershell
-sf org login jwt --client-id <consumer key> --jwt-key-file "$HOME\.sf-portfolio-ci\devhub.key" --username <utilisateur du Dev Hub> --alias devhub-jwt
+### Erreur `C-1016` à la création de la scratch org
+
+Depuis Spring '26, le service d'inscription ne sait plus répliquer l'app du Dev Hub dans la nouvelle scratch org,
+et ce, qu'il s'agisse d'une ECA ou d'une Connected App (mesuré le 2026-10-29 avec `demo2`).
+Le contournement officiel, affiché par `@salesforce/core` ≥ 9.4 et suivi dans [forcedotcom/cli#3515](https://github.com/forcedotcom/cli/issues/3515),
+consiste à faire passer l'inscription par l'app intégrée de la CLI. [ci.yml](../.github/workflows/ci.yml) le fait à l'étape _Create scratch org_ :
+
+```yaml
+SF_SCRATCH_SIGNUP_CONNECTED_APP: PlatformCLI
+SF_SCRATCH_SIGNUP_CALLBACK_URL: http://localhost:1717/OauthRedirect
 ```
+
+Une création en échec ne consomme pas le quota quotidien.
+
+## 3. Tester uniquement dans la CI
+
+Ne pas tester `sf org login jwt` en local avec le même utilisateur que l'alias `portfolio` : la connexion JWT remplace la connexion web,
+et un échec supprime l'autorisation locale. Lancer plutôt le workflow à la demande (_Actions_ → _CI_ → _Run workflow_).
 
 ## 4. Secrets GitHub (Settings → Secrets and variables → Actions)
 

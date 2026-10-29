@@ -69,7 +69,12 @@ jobs:
             --username "$SF_DEVHUB_USERNAME" --alias devhub --set-default-dev-hub
           rm -f "$key_file"
 
+      # Since Spring '26 the signup service cannot replicate a custom Dev Hub app into the scratch org (C-1016):
+      # sign up through Salesforce's built-in CLI app instead (official workaround printed by @salesforce/core).
       - name: Create scratch org
+        env:
+          SF_SCRATCH_SIGNUP_CONNECTED_APP: PlatformCLI
+          SF_SCRATCH_SIGNUP_CALLBACK_URL: http://localhost:1717/OauthRedirect
         run: sf org create scratch --definition-file config/project-scratch-def.json --alias ci --duration-days 1 --wait 20 --set-default
 
       - name: Deploy
