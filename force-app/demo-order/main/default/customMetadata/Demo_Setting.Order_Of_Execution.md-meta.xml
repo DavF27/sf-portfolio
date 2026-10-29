@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Trigger vs Flow Order</label>
+    <protected>false</protected>
+    <values>
+        <field>Mode__c</field>
+        <value xsi:type="xsd:string">BEFORE</value>
+    </values>
+    <values>
+        <field>Before_Class__c</field>
+        <value xsi:type="xsd:string">AssetInstallationStrategy</value>
+    </values>
+    <values>
+        <field>After_Class__c</field>
+        <value xsi:type="xsd:string">AssetInstallationStrategy</value>
+    </values>
+    <values>
+        <field>Seeder_Class__c</field>
+        <value xsi:type="xsd:string">AssetInstallationSeeder</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Installing an asset snapshots its service terms, computed by a flow. BEFORE: an after-save flow runs after the trigger, every snapshot is empty and the run still succeeds. AFTER: a before-save flow computes them first.</value>
+    </values>
+    <values>
+        <field>Default_Volume__c</field>
+        <value xsi:type="xsd:double">50.0</value>
+    </values>
+    <values>
+        <field>Max_Volume__c</field>
+        <value xsi:type="xsd:double">200.0</value>
+    </values>
+    <values>
+        <field>Sort_Order__c</field>
+        <value xsi:type="xsd:double">2.0</value>
+    </values>
+    <values>
+        <field>Is_Active__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

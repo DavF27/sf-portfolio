@@ -184,12 +184,20 @@ de la carte raccourcie sous 255 caractères, erreurs résumées dans le tableau 
 Mécanisme : un trigger `after update` s'exécute **avant** un flow `after-save` ; une copie (« photo ») créée par le trigger
 manque les valeurs calculées par le flow.
 
-- [ ] Modèle : `Asset_Demo__c` + `Asset_Snapshot__c`.
-- [ ] AVANT : le trigger crée la photo → champs calculés vides.
-- [ ] APRÈS : photo créée/alimentée après le calcul (déplacement de la logique ou mise à jour de la photo existante, selon le choix documenté).
-- [ ] Tests : 200 records, assertions sur chaque champ de la photo.
+- [x] Modèle : `Asset_Demo__c` + `Asset_Snapshot_Demo__c` (master-detail ; suffixe `_Demo` comme les autres démos).
+- [x] AVANT : calcul dans le flow after-save `Asset_Demo_Service_Terms_After_Save` → le trigger after prend une photo vide ; au
+      réenregistrement déclenché par le flow, ce n'est plus une nouvelle installation, donc pas de nouvelle photo.
+- [x] APRÈS : choix documenté = **déplacement du calcul dans un flow before-save** (`Asset_Demo_Service_Terms_Before_Save`) ;
+      alternative « rafraîchir la photo » écartée (voir la fiche). Même trigger, flow choisi par `Processing_Mode__c`.
+- [x] Échec AVANT **silencieux** : run « Succeeded », chaque photo incomplète comptée comme ligne en échec (grille rouge).
+- [x] Frise : chaque acteur publie son étape (trigger before = témoin du flow before-save, qui ne peut pas appeler d'Apex ;
+      flow after-save via l'action invocable `DemoStepAction`) ; séquence partagée par run dans `DemoStepPublisher`.
+- [x] Tests : 200 records, assertions sur chaque champ de chaque photo (AVANT : vides ; APRÈS : égales aux valeurs recalculées en Apex),
+      ordre des étapes vérifié. Validation check-only dans `portfolio` : **81 tests Apex, 0 échec**.
+- [x] Fiche [docs/demos/order-of-execution.md](docs/demos/order-of-execution.md) avec les schémas Mermaid AVANT/APRÈS.
 
-**Preuve :** test avant en échec sur champs vides, test après vert ; schéma de l'ordre d'exécution dans la fiche.
+**Preuve :** tests ci-dessus ; captures et GIF de la CI au prochain run (quota de scratch orgs épuisé le 2026-10-29,
+push groupé avec `a032576`).
 
 ### Phase 4 — Démo « Chaîne asynchrone silencieuse »
 

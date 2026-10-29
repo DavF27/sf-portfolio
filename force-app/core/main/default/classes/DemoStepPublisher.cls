@@ -17,9 +17,15 @@ public with sharing class DemoStepPublisher {
   @TestVisible
   private static List<Demo_Step__e> publishedEvents = new List<Demo_Step__e>();
 
+  /**
+   * One sequence per run for the whole transaction: triggers, flows (through DemoStepAction) and the
+   * run service publish with their own publisher, and the panel timeline orders their steps by it.
+   */
+  private static Map<String, Integer> sequenceByRun = new Map<String, Integer>();
+
   private final DemoRunService.Request request;
   private final DemoMetrics metrics;
-  private Integer sequence = 0;
+  private Boolean sequenced = true;
   private Integer progressSteps = 0;
 
   public DemoStepPublisher(
@@ -39,11 +45,20 @@ public with sharing class DemoStepPublisher {
     Integer recordsProcessed,
     Integer recordsFailed
   ) {
+    step(label, recordsProcessed, recordsFailed, null);
+  }
+
+  public void step(
+    String label,
+    Integer recordsProcessed,
+    Integer recordsFailed,
+    String message
+  ) {
     if (progressSteps >= MAX_PROGRESS_STEPS) {
       return;
     }
     progressSteps++;
-    emit(PHASE_STEP, label, null, recordsProcessed, recordsFailed, null);
+    emit(PHASE_STEP, label, message, recordsProcessed, recordsFailed, null);
   }
 
   public void succeed(DemoResult result) {
@@ -77,7 +92,7 @@ public with sharing class DemoStepPublisher {
     String message
   ) {
     DemoStepPublisher publisher = new DemoStepPublisher(request, null);
-    publisher.sequence = null;
+    publisher.sequenced = false;
     publisher.emit(
       PHASE_FAILED,
       'Failed (uncaught)',
@@ -86,6 +101,12 @@ public with sharing class DemoStepPublisher {
       null,
       null
     );
+  }
+
+  private static Integer nextSequence(String runKey) {
+    Integer next = (sequenceByRun.get(runKey) ?? 0) + 1;
+    sequenceByRun.put(runKey, next);
+    return next;
   }
 
   private void emit(
@@ -104,7 +125,7 @@ public with sharing class DemoStepPublisher {
       Volume__c = request.volume,
       Chaos__c = request.chaos == true,
       Phase__c = phase,
-      Sequence__c = sequence == null ? null : ++sequence,
+      Sequence__c = sequenced ? nextSequence(request.runKey) : null,
       Label__c = label?.abbreviate(MAX_LABEL_LENGTH),
       Message__c = message?.abbreviate(MAX_MESSAGE_LENGTH),
       Records_Processed__c = recordsProcessed,

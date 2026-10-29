@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <assignments>
+        <name>Set_Service_Terms</name>
+        <label>Set Service Terms</label>
+        <locationX>176</locationX>
+        <locationY>287</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Warranty_End__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>WarrantyEnd</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>$Record.Service_Tier__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>ServiceTier</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>$Record.Next_Maintenance__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>NextMaintenance</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <description
+  >AFTER mode of the order of execution demo: computes the service terms before the save (fast field update), so the after trigger already sees them.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>NextMaintenance</name>
+        <dataType>Date</dataType>
+        <expression
+    >ADDMONTHS({!$Record.Installed_On__c}, IF(ISPICKVAL({!$Record.Product_Family__c}, &quot;Premium&quot;), 3, 6))</expression>
+    </formulas>
+    <formulas>
+        <name>ServiceTier</name>
+        <dataType>String</dataType>
+        <expression
+    >IF(ISPICKVAL({!$Record.Product_Family__c}, &quot;Premium&quot;), &quot;Gold&quot;, &quot;Silver&quot;)</expression>
+    </formulas>
+    <formulas>
+        <name>WarrantyEnd</name>
+        <dataType>Date</dataType>
+        <expression
+    >ADDMONTHS({!$Record.Installed_On__c}, IF(ISPICKVAL({!$Record.Product_Family__c}, &quot;Premium&quot;), 36, 24))</expression>
+    </formulas>
+    <interviewLabel
+  >Asset Demo - Service Terms (Before Save) {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Asset Demo - Service Terms (Before Save)</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Service_Terms</targetReference>
+        </connector>
+        <doesRequireRecordChangedToMeetCriteria
+    >true</doesRequireRecordChangedToMeetCriteria>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Status__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Installed</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Processing_Mode__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>AFTER</stringValue>
+            </value>
+        </filters>
+        <object>Asset_Demo__c</object>
+        <recordTriggerType>Update</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

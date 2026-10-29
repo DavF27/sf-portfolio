@@ -81,7 +81,7 @@ jobs:
         run: sf project deploy start --target-org ci --wait 30
 
       - name: Assign permission sets
-        run: sf org assign permset --name Demo_Admin --name Demo_Bulk --target-org ci
+        run: sf org assign permset --name Demo_Admin --name Demo_Bulk --name Demo_Order --target-org ci
 
       - name: Apex tests
         run: |

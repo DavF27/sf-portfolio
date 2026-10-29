@@ -80,4 +80,23 @@ private class DemoStepPublisherTest {
     Assert.isNull(event.Sequence__c);
     Assert.isNull(event.SOQL_Queries__c);
   }
+
+  @IsTest
+  static void publishersOfTheSameRunShareOneSequence() {
+    DemoRunService.Request request = newRequest();
+    DemoStepPublisher triggerPublisher = new DemoStepPublisher(request, null);
+    DemoStepPublisher flowPublisher = new DemoStepPublisher(request, null);
+
+    Test.startTest();
+    triggerPublisher.step('Before trigger', 1, 0);
+    flowPublisher.step('After-save flow', 1, 0, 'Computed');
+    triggerPublisher.step('After trigger', 1, 0);
+    Test.stopTest();
+
+    List<Demo_Step__e> events = DemoStepPublisher.publishedEvents;
+    Assert.areEqual(1, events[0].Sequence__c);
+    Assert.areEqual(2, events[1].Sequence__c);
+    Assert.areEqual('Computed', events[1].Message__c);
+    Assert.areEqual(3, events[2].Sequence__c);
+  }
 }

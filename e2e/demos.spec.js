@@ -24,6 +24,14 @@ const DEMOS = [
     before: { status: "Failed", error: /Limit Exceeded|Too many/ },
     after: { status: "Succeeded", summary: "50 succeeded, 0 failed" },
     chaos: { status: "Succeeded", summary: "49 succeeded, 1 failed" }
+  },
+  {
+    name: "Order_Of_Execution",
+    slug: "order-of-execution",
+    volume: "50",
+    // Silent failure: the save succeeds, every snapshot misses the service terms.
+    before: { status: "Succeeded", summary: "0 succeeded, 50 failed" },
+    after: { status: "Succeeded", summary: "50 succeeded, 0 failed" }
   }
 ];
 
