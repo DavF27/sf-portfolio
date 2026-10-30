@@ -48,7 +48,9 @@ Contraintes découvertes en Phase 2 (mesurées, preuves dans la CI) :
 - `update` en `USER_MODE` refuse un champ master-detail non reparentable présent sur l'enregistrement : mettre à jour des copies ;
 - `Demo_Setting__mdt.getAll()` tronque les champs texte long à **255 caractères** (test de garde dans `DemoCatalogTest`) ;
 - l'URL _frontdoor_ de `sf org open --url-only` est **à usage unique** : Playwright se connecte une fois (global setup) et réutilise la session ;
-- quota de scratch orgs atteint le 2026-10-29 (6 créations sur 24 h glissantes) : regrouper les push qui déclenchent la CI.
+- quota de scratch orgs atteint le 2026-10-29 (6 créations) : regrouper les push qui déclenchent la CI. Mesuré le 2026-10-30 à 10 h 43 :
+  `DailyScratchOrgs` = 6/6 disponibles alors que 6 orgs avaient été créées moins de 24 h avant ; le compteur se réinitialise donc plus tôt que
+  ne le laisse penser la règle « 24 h glissantes ». C'est `sf org list limits` qui fait foi.
 
 ## Architecture
 
@@ -176,8 +178,8 @@ Mécanisme : un lot Bulk API passe dans une seule transaction de trigger ; une c
 Captures `docs/screenshots/bulk-all-or-nothing/` (`before.png`, `after.png`, `chaos.png`, GIF) dans l'artefact `proof-<sha>`.
 Vitrine : déployée dans `portfolio` le 2026-10-29 (`0Afak00000qKii7CAC`, 131 composants, 65 tests), permission set `Demo_Bulk` attribuée.
 
-En attente du prochain run CI (quota de scratch orgs épuisé le 2026-10-29) : capture `chaos.png` corrigée (page défilée), description
-de la carte raccourcie sous 255 caractères, erreurs résumées dans le tableau des runs.
+Corrections vérifiées par la CI [41035719990](https://github.com/DavF27/sf-portfolio/actions/runs/41035719990) (commit `86bf23e`) :
+`chaos.png` correcte, description complète, erreurs résumées dans le tableau des runs.
 
 ### Phase 3 — Démo « Ordre d'exécution trigger / flow »
 
@@ -196,8 +198,15 @@ manque les valeurs calculées par le flow.
       ordre des étapes vérifié. Validation check-only dans `portfolio` : **81 tests Apex, 0 échec**.
 - [x] Fiche [docs/demos/order-of-execution.md](docs/demos/order-of-execution.md) avec les schémas Mermaid AVANT/APRÈS.
 
-**Preuve :** tests ci-dessus ; captures et GIF de la CI au prochain run (quota de scratch orgs épuisé le 2026-10-29,
-push groupé avec `a032576`).
+**Preuve** (CI [41035719990](https://github.com/DavF27/sf-portfolio/actions/runs/41035719990), commit `86bf23e`, 81 tests Apex) :
+
+| Mode  | Volume | Run                             | Photos incomplètes | SOQL | DML |
+| ----- | -----: | ------------------------------- | -----------------: | ---: | --: |
+| AVANT |    200 | ✅ Succeeded (échec silencieux) |          200 / 200 |    3 |   3 |
+| APRÈS |    200 | ✅ Succeeded                    |            0 / 200 |    2 |   2 |
+
+Captures `docs/screenshots/order-of-execution/` : la frise AVANT montre trigger before → trigger after (photo vide) → flow after-save →
+réenregistrement. Vitrine : déployée dans `portfolio` le 2026-10-30 (`0Afak00000qSm3nCAC`, 164 composants), permission set `Demo_Order` attribuée.
 
 ### Phase 4 — Démo « Chaîne asynchrone silencieuse »
 
