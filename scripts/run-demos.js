@@ -84,8 +84,16 @@ async function main() {
       };
       const outcome = executeRun(run, targetOrg);
       if (outcome.response?.status === "Running") {
-        // Asynchronous demo: the next run resets the same records, let these jobs finish first.
+        // Asynchronous demo: the next run resets the same records. Let these jobs finish, then hand the
+        // run to the demo monitor if no job closed it (silent failure), while its records are still there.
         await waitForAsyncJobs(targetOrg, 600);
+        const { missing } = await pollRuns([run.runKey], targetOrg, 30);
+        if (missing.length > 0) {
+          const response = monitorRun(run, targetOrg);
+          console.log(
+            `${run.demo} ${mode}${chaos ? " + chaos" : ""}: no job closed the run, monitoring says ${response?.status}`
+          );
+        }
       }
       console.log(
         `${run.demo} ${mode}${chaos ? " + chaos" : ""} volume=${volume}: ${outcome.success ? "completed" : `failed (${outcome.message})`}`
@@ -94,21 +102,11 @@ async function main() {
     }
   }
 
-  const runKeys = planned.map((run) => run.runKey);
-  await waitForAsyncJobs(targetOrg, 600);
-  const { missing } = await pollRuns(
-    runKeys,
+  const ordered = await waitForRuns(
+    planned.map((run) => run.runKey),
     targetOrg,
     Number(args.timeout || 90)
   );
-  for (const run of planned.filter((item) => missing.includes(item.runKey))) {
-    // Nobody closed this run: ask the demo monitor (a silent asynchronous failure is closed as FAILED).
-    const response = monitorRun(run, targetOrg);
-    console.log(
-      `${run.demo} ${run.mode}${run.chaos ? " + chaos" : ""}: monitoring says ${response?.status}`
-    );
-  }
-  const ordered = await waitForRuns(runKeys, targetOrg, 60);
   const markdown = toMarkdown(ordered, {
     title: "Demo metrics (measured in the org)",
     commit: process.env.GITHUB_SHA,
