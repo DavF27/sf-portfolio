@@ -230,8 +230,21 @@ sans erreur visible, le groupe reste bloqué dans un état intermédiaire.
       sans séquence (ordre d'arrivée).
 - [x] Tests : 109 tests Apex (couverture 98,8 %), 34 tests Jest, 21 tests de scripts. Fiche [docs/demos/async-chain-break.md](docs/demos/async-chain-break.md).
 
-**Preuve :** avant = N lignes bloquées et aucune erreur ; après = 0 ligne bloquée, ou échec journalisé explicitement.
-Mesures de la CI et captures : voir le prochain run (`run-demos.js --chaos-demo Async_Chain_Break`, `docs/screenshots/async-chain-break/`).
+**Preuve** (CI [41045565063](https://github.com/DavF27/sf-portfolio/actions/runs/41045565063), commit `cb87693`, 110 tests Apex) :
+
+| Mode  | Chaos | Lignes | Run          | Lignes en échec | Comment le run est fermé                                                                                      |
+| ----- | ----- | -----: | ------------ | --------------: | ------------------------------------------------------------------------------------------------------------- |
+| AVANT | non   |    100 | ✅ Succeeded |               0 | dernier maillon (100 jobs, un par ligne)                                                                      |
+| APRÈS | non   |    100 | ✅ Succeeded |               0 | dernier finalizer (20 jobs, un par lot)                                                                       |
+| AVANT | oui   |    100 | ❌ Failed    |      3 bloquées | **par la surveillance** : aucun job ne l'a fermé, aucune erreur journalisée (1 job en échec dans _Apex Jobs_) |
+| APRÈS | oui   |    100 | ✅ Succeeded |  5 journalisées | dernier finalizer, lot piégé _Failed_ avec sa cause, 0 ligne bloquée                                          |
+
+Captures `docs/screenshots/async-chain-break/` : en AVANT, les tuiles s'allument chaîne par chaîne, 47 vertes et 3 rouges après détection.
+Vitrine : déployée dans `portfolio` le 2026-10-30 (`0Afak00000qTsLdCAK`, 203 composants, 110 tests), permission set `Demo_Async` attribuée.
+
+Défaut trouvé par le premier run CI et corrigé : un run asynchrone lancé sous les jobs du précédent réinitialisait les mêmes lignes
+(`UNABLE_TO_LOCK_ROW`). La stratégie refuse désormais de démarrer tant que des jobs d'activation tournent, et `run-demos.js` attend
+puis surveille chaque run asynchrone avant le suivant.
 
 ### Phase 5 — Démo « Batch : filtre Apex vs SOQL »
 
