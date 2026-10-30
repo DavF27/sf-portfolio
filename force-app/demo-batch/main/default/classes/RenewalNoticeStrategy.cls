@@ -53,7 +53,8 @@ public with sharing class RenewalNoticeStrategy implements DemoStrategy, DemoRac
           RenewalNoticeBatchAfter.BATCH_SIZE
         );
 
-    DemoResult result = new DemoResult(prepared, 0);
+    // Nothing is covered yet: the batch publishes its own progress.
+    DemoResult result = new DemoResult(0, 0);
     result.pending = true;
     result.asyncJobId = jobId;
     result.message = context.isBefore()

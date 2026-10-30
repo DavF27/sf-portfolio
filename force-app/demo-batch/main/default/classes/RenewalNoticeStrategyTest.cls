@@ -15,6 +15,11 @@ private class RenewalNoticeStrategyTest {
 
       Assert.areEqual(DemoStepHandler.STATUS_RUNNING, response.status);
       Assert.isNotNull(response.result.asyncJobId);
+      Assert.areEqual(
+        0,
+        response.result.recordsProcessed,
+        'Nothing is covered until the batch reports its progress'
+      );
       Assert.isTrue(response.result.message.contains('10 renewals selected'));
       Demo_Run__c run = DemoTestFactory.findRun(request.runKey);
       Assert.areEqual(DemoStepHandler.STATUS_SUCCEEDED, run.Status__c);
