@@ -55,8 +55,12 @@ Tests Apex (200 contrats par couloir) :
 - AVANT : **200 exécutions** pour 10 avis envoyés ;
 - APRÈS : **1 exécution** pour les mêmes 10 avis.
 
-Durées et exécutions mesurées par la CI (scratch org, 1 000 contrats par couloir) : voir le tableau de `PLAN.md`, Phase 5,
-et le résumé du job. Captures de la course : `docs/screenshots/batch-filter/race.png` (APRÈS terminé, AVANT en cours)
+Mesuré par la CI (scratch org, 1 000 contrats par couloir) :
+
+- AVANT : **1 000 exécutions**, 32 à 52 s selon la charge de la file asynchrone ;
+- APRÈS : **1 exécution**, 1 à 2 s.
+
+Le nombre d'exécutions est stable d'un run à l'autre ; la durée dépend de la file d'attente partagée. Captures de la course : `docs/screenshots/batch-filter/race.png` (APRÈS terminé, AVANT en cours)
 et `race-finished.png`.
 
 Limite des tests Apex : un test n'exécute qu'un seul `execute()` par `Database.executeBatch`. L'AVANT (lot de 1) est donc

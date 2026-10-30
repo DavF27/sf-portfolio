@@ -264,7 +264,18 @@ Mécanisme : un batch parcourt tout le stock et filtre en Apex, record par recor
 - [x] Visuel : bouton _Race_ (interface `DemoRaceable`), composant `raceLanes` (progression, chronomètre, exécutions, premier arrivé).
 - [x] Tests : 122 tests Apex, 41 tests Jest, 22 tests de scripts. Fiche [docs/demos/batch-filter.md](docs/demos/batch-filter.md).
 
-**Preuve :** tableau durée / exécutions avant-après produit par la CI (à compléter après le run).
+**Preuve (CI verte, run 41054955308, commit `89a7fe8`, scratch org, 1 000 contrats par couloir) :**
+
+| Mode                            | Exécutions (`JobItemsProcessed`) | Durée jusqu'au `finish` | Avis envoyés |
+| ------------------------------- | -------------------------------: | ----------------------: | -----------: |
+| AVANT (filtre Apex, lot de 1)   |                            1 000 |                    32 s |           50 |
+| APRÈS (filtre SOQL, lot de 200) |                                1 |                     1 s |           50 |
+
+Le run précédent (41052625837) mesurait 52 s contre 2 s : la durée de l'AVANT varie avec la file d'attente asynchrone partagée,
+le nombre d'exécutions ne varie pas. Captures de la course : `race.png` (APRÈS terminé, AVANT à 0/200) et `race-finished.png`.
+Correctif issu de la CI : au lancement, la stratégie annonçait tout le stock comme couvert ; elle annonce désormais 0.
+
+**Déployé dans `portfolio`** le 2026-10-30 (`0Afak00000qUQjtCAG`, 230 composants, 122 tests), permission set `Demo_Batch` attribuée.
 
 ### Phase 6 — Outillage DevOps
 
