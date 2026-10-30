@@ -180,6 +180,28 @@ private class AsyncOrderStrategyTest {
   }
 
   @IsTest
+  static void refusesToStartUnderTheJobsOfThePreviousRun() {
+    System.runAs(AsyncDemoTestSupport.runner()) {
+      Test.startTest();
+      DemoRunService.run(
+        AsyncDemoTestSupport.request(DemoRunService.MODE_AFTER, 10, false)
+      );
+      DemoRunService.Response second = DemoRunService.run(
+        AsyncDemoTestSupport.request(DemoRunService.MODE_BEFORE, 10, false)
+      );
+      Test.stopTest();
+
+      Assert.areEqual(DemoStepHandler.STATUS_FAILED, second.status);
+      Assert.isTrue(
+        second.errorMessage.contains(
+          'previous run still has 2 activation job(s)'
+        ),
+        second.errorMessage
+      );
+    }
+  }
+
+  @IsTest
   static void monitorRejectsUnknownRuns() {
     System.runAs(AsyncDemoTestSupport.runner()) {
       Test.startTest();

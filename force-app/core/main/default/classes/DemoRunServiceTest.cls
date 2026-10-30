@@ -164,6 +164,16 @@ private class DemoRunServiceTest {
     Demo_Run__c run = DemoTestFactory.findRun(request.runKey);
     Assert.areEqual(DemoStepHandler.STATUS_RUNNING, run.Status__c);
     Assert.isNull(run.Finished_At__c);
+    Assert.areEqual(
+      '707000000000001AAA',
+      [
+        SELECT Async_Job_Id__c
+        FROM Demo_Run__c
+        WHERE Run_Key__c = :request.runKey
+      ]
+      .Async_Job_Id__c,
+      'The enqueued step records the first job'
+    );
   }
 
   @IsTest

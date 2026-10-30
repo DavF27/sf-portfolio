@@ -168,7 +168,9 @@ public with sharing class DemoStepHandler {
     }
     // Event timestamps only have second precision: fall back on them only when no step measured the
     // duration, or when an asynchronous job closes the run (the synchronous part only measured itself).
-    Boolean closedByAsyncJob = String.isNotBlank(event.Async_Job_Id__c);
+    Boolean closedByAsyncJob =
+      String.isNotBlank(event.Async_Job_Id__c) ||
+      String.isNotBlank(run.Async_Job_Id__c);
     if (
       run.Started_At__c != null &&
       (run.Duration_Ms__c == null || closedByAsyncJob)

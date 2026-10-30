@@ -16,6 +16,15 @@ public with sharing class AsyncOrderStrategy implements DemoStrategy, DemoMonito
   };
 
   public DemoResult execute(DemoContext context) {
+    // A new run resets the same lines: it must not run under the jobs of the previous one.
+    Integer activeJobs = countActiveJobs();
+    if (activeJobs > 0) {
+      throw new DemoException(
+        'The previous run still has ' +
+          activeJobs +
+          ' activation job(s) queued or running: wait for it to finish'
+      );
+    }
     AsyncOrderDemo.Prepared prepared = AsyncOrderDemo.prepare(
       context.volume,
       context.chaos,
@@ -101,11 +110,7 @@ public with sharing class AsyncOrderStrategy implements DemoStrategy, DemoMonito
       throw new DemoException('No order found for run ' + context.runKey);
     }
     DemoResult result = new DemoResult(context.volume, 0);
-    Integer activeJobs = [
-      SELECT COUNT()
-      FROM AsyncApexJob
-      WHERE ApexClass.Name IN :JOB_CLASSES AND Status IN :ACTIVE_JOB_STATUSES
-    ];
+    Integer activeJobs = countActiveJobs();
     if (activeJobs > 0) {
       result.pending = true;
       result.message =
@@ -126,13 +131,14 @@ public with sharing class AsyncOrderStrategy implements DemoStrategy, DemoMonito
       result.failedRows.add(line.Row__c.intValue());
     }
     result.recordsFailed = result.failedRows.size();
+    Datetime runStart = runStartedAt(context.runKey);
     Integer failedJobs = [
       SELECT COUNT()
       FROM AsyncApexJob
       WHERE
         ApexClass.Name IN :JOB_CLASSES
         AND Status = 'Failed'
-        AND CreatedDate = TODAY
+        AND CreatedDate >= :runStart
     ];
     result.message = result.hasFailures()
       ? result.recordsFailed +
@@ -141,5 +147,27 @@ public with sharing class AsyncOrderStrategy implements DemoStrategy, DemoMonito
         ' failed job(s) visible only in Setup > Apex Jobs)'
       : 'No stuck line';
     return result;
+  }
+
+  private static Integer countActiveJobs() {
+    return [
+      SELECT COUNT()
+      FROM AsyncApexJob
+      WHERE ApexClass.Name IN :JOB_CLASSES AND Status IN :ACTIVE_JOB_STATUSES
+    ];
+  }
+
+  /** Start of the run (Demo_Run__c), so that failed jobs of earlier runs are not counted. */
+  private static Datetime runStartedAt(String runKey) {
+    List<Demo_Run__c> runs = [
+      SELECT Started_At__c
+      FROM Demo_Run__c
+      WHERE Run_Key__c = :runKey
+      WITH USER_MODE
+      LIMIT 1
+    ];
+    Datetime startedAt = runs.isEmpty() ? null : runs[0].Started_At__c;
+    // Event timestamps have second precision: include jobs created in the same second.
+    return (startedAt ?? Datetime.now().addHours(-1)).addSeconds(-1);
   }
 }

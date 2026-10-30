@@ -86,6 +86,18 @@ public with sharing class DemoStepPublisher {
     return this;
   }
 
+  /** Synchronous part done, asynchronous work enqueued: the run stays open, its first job is recorded. */
+  public void enqueued(DemoResult result) {
+    emit(
+      PHASE_STEP,
+      'Asynchronous work enqueued',
+      result?.message,
+      result?.recordsProcessed,
+      0,
+      result?.asyncJobId
+    );
+  }
+
   public void succeed(DemoResult result) {
     emit(
       PHASE_SUCCEEDED,

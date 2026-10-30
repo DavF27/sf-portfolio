@@ -34,12 +34,7 @@ public with sharing class DemoRunService {
       if (result.pending == true) {
         // The asynchronous work publishes the outcome; the run stays Running until then.
         response.status = DemoStepHandler.STATUS_RUNNING;
-        publisher.step(
-          'Asynchronous work enqueued',
-          result.recordsProcessed,
-          0,
-          result.message
-        );
+        publisher.enqueued(result);
       } else {
         response.status = DemoStepHandler.STATUS_SUCCEEDED;
         publisher.succeed(result);

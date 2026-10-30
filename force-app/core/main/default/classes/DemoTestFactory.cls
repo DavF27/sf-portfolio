@@ -160,6 +160,7 @@ public class DemoTestFactory {
     public DemoResult execute(DemoContext context) {
       DemoResult result = new DemoResult(context.volume, 0);
       result.pending = true;
+      result.asyncJobId = '707000000000001AAA';
       result.message = 'Enqueued ' + context.volume + ' jobs';
       return result;
     }

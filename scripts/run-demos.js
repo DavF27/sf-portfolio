@@ -83,6 +83,10 @@ async function main() {
         chaos
       };
       const outcome = executeRun(run, targetOrg);
+      if (outcome.response?.status === "Running") {
+        // Asynchronous demo: the next run resets the same records, let these jobs finish first.
+        await waitForAsyncJobs(targetOrg, 600);
+      }
       console.log(
         `${run.demo} ${mode}${chaos ? " + chaos" : ""} volume=${volume}: ${outcome.success ? "completed" : `failed (${outcome.message})`}`
       );
