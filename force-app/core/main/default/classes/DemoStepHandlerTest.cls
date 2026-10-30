@@ -188,6 +188,7 @@ private class DemoStepHandlerTest {
       null
     );
     closedByJob.Async_Job_Id__c = '707000000000001AAA';
+    closedByJob.Async_Executions__c = 500;
 
     Test.startTest();
     EventBus.publish(syncStep);
@@ -198,5 +199,6 @@ private class DemoStepHandlerTest {
     Demo_Run__c run = DemoTestFactory.findRun(runKey);
     Assert.areEqual(DemoStepHandler.STATUS_SUCCEEDED, run.Status__c);
     Assert.isTrue(run.Duration_Ms__c >= 40);
+    Assert.areEqual(500, run.Async_Executions__c);
   }
 }

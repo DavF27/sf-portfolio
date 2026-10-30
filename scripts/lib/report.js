@@ -118,8 +118,8 @@ function toMarkdown(runs, { title = "Demo metrics", commit, date } = {}) {
     lines.push(`Commit \`${commit || "local"}\` · ${date || ""}`.trim(), "");
   }
   lines.push(
-    "| Demo | Mode | Chaos | Volume | Status | SOQL | DML | CPU (ms) | Duration (ms) | Processed | Failed | Error |",
-    "|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|"
+    "| Demo | Mode | Chaos | Volume | Status | SOQL | DML | CPU (ms) | Duration (ms) | Processed | Failed | Async executions | Error |",
+    "|---|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---|"
   );
   for (const run of runs) {
     const error = (run.Error_Message__c || "")
@@ -127,7 +127,7 @@ function toMarkdown(runs, { title = "Demo metrics", commit, date } = {}) {
       .replace(/\r?\n/g, " ")
       .slice(0, 120);
     lines.push(
-      `| ${run.Demo__c} | ${run.Mode__c} | ${run.Chaos__c ? "yes" : "no"} | ${formatNumber(run.Volume__c)} | ${run.Status__c === "Succeeded" ? "✅" : "❌"} ${run.Status__c} | ${withLimit(run.SOQL_Queries__c, run.SOQL_Limit__c)} | ${withLimit(run.DML_Statements__c, run.DML_Limit__c)} | ${formatNumber(run.CPU_Time_Ms__c)} | ${formatNumber(run.Duration_Ms__c)} | ${formatNumber(run.Records_Processed__c)} | ${formatNumber(run.Records_Failed__c)} | ${error} |`
+      `| ${run.Demo__c} | ${run.Mode__c} | ${run.Chaos__c ? "yes" : "no"} | ${formatNumber(run.Volume__c)} | ${run.Status__c === "Succeeded" ? "✅" : "❌"} ${run.Status__c} | ${withLimit(run.SOQL_Queries__c, run.SOQL_Limit__c)} | ${withLimit(run.DML_Statements__c, run.DML_Limit__c)} | ${formatNumber(run.CPU_Time_Ms__c)} | ${formatNumber(run.Duration_Ms__c)} | ${formatNumber(run.Records_Processed__c)} | ${formatNumber(run.Records_Failed__c)} | ${formatNumber(run.Async_Executions__c)} | ${error} |`
     );
   }
   return `${lines.join("\n")}\n`;

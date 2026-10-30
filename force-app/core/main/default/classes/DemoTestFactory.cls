@@ -118,6 +118,7 @@ public class DemoTestFactory {
         Step_Count__c,
         SOQL_Limit__c,
         DML_Limit__c,
+        Async_Executions__c,
         Error_Message__c,
         Started_At__c,
         Finished_At__c
@@ -156,7 +157,7 @@ public class DemoTestFactory {
   }
 
   /** Asynchronous demo double: execute() leaves the run pending, inspect() returns what the test sets. */
-  public class MonitoredStrategy implements DemoStrategy, DemoMonitor {
+  public class MonitoredStrategy implements DemoStrategy, DemoMonitor, DemoRaceable {
     public DemoResult execute(DemoContext context) {
       DemoResult result = new DemoResult(context.volume, 0);
       result.pending = true;

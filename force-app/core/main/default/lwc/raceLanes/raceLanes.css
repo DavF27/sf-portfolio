@@ -1,0 +1,9 @@
+.race__lane {
+  height: 100%;
+}
+
+.race__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

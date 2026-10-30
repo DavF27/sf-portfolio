@@ -119,6 +119,7 @@ public with sharing class DemoController {
         Step_Count__c,
         SOQL_Limit__c,
         DML_Limit__c,
+        Async_Executions__c,
         Error_Message__c,
         Started_At__c,
         Finished_At__c
@@ -172,6 +173,8 @@ public with sharing class DemoController {
     public Boolean hasSeeder;
     @AuraEnabled
     public Boolean hasMonitor;
+    @AuraEnabled
+    public Boolean supportsRace;
 
     public DemoDefinition(Demo_Setting__mdt setting) {
       name = setting.DeveloperName;
@@ -181,17 +184,16 @@ public with sharing class DemoController {
       defaultVolume = setting.Default_Volume__c?.intValue();
       maxVolume = setting.Max_Volume__c?.intValue();
       hasSeeder = String.isNotBlank(setting.Seeder_Class__c);
-      hasMonitor = isMonitored(setting);
+      DemoStrategy strategy = strategyOf(setting);
+      hasMonitor = strategy instanceof DemoMonitor;
+      supportsRace = strategy instanceof DemoRaceable;
     }
 
-    private Boolean isMonitored(Demo_Setting__mdt setting) {
+    private DemoStrategy strategyOf(Demo_Setting__mdt setting) {
       try {
-        return DemoStrategyFactory.create(
-          setting,
-          DemoRunService.MODE_BEFORE
-        ) instanceof DemoMonitor;
+        return DemoStrategyFactory.create(setting, DemoRunService.MODE_BEFORE);
       } catch (DemoException e) {
-        return false;
+        return null;
       }
     }
   }

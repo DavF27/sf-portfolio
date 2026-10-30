@@ -27,6 +27,7 @@ const RUN_FIELDS = [
   "Records_Processed__c",
   "Records_Failed__c",
   "Step_Count__c",
+  "Async_Executions__c",
   "Error_Message__c"
 ].join(", ");
 
@@ -84,12 +85,12 @@ async function waitForRuns(runKeys, targetOrg, timeoutSeconds = 90) {
   return runs;
 }
 
-/** Waits until no queueable job is queued or running in the org (the demo org runs nothing else). */
+/** Waits until no queueable or batch job is queued or running in the org (the demo org runs nothing else). */
 async function waitForAsyncJobs(targetOrg, timeoutSeconds = 300) {
   const deadline = Date.now() + timeoutSeconds * 1000;
   for (;;) {
     const active = query(
-      "SELECT Id FROM AsyncApexJob WHERE JobType = 'Queueable' AND Status IN ('Holding', 'Queued', 'Preparing', 'Processing') LIMIT 200",
+      "SELECT Id FROM AsyncApexJob WHERE JobType IN ('Queueable', 'BatchApex') AND Status IN ('Holding', 'Queued', 'Preparing', 'Processing') LIMIT 200",
       targetOrg
     );
     if (active.length === 0) {

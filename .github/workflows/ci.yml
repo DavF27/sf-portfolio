@@ -43,7 +43,7 @@ jobs:
     needs: static
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 100
     concurrency:
       group: scratch-org
       cancel-in-progress: false
@@ -81,7 +81,7 @@ jobs:
         run: sf project deploy start --target-org ci --wait 30
 
       - name: Assign permission sets
-        run: sf org assign permset --name Demo_Admin --name Demo_Bulk --name Demo_Order --name Demo_Async --target-org ci
+        run: sf org assign permset --name Demo_Admin --name Demo_Bulk --name Demo_Order --name Demo_Async --name Demo_Batch --target-org ci
 
       - name: Apex tests
         run: |

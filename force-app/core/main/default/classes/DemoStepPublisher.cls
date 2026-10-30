@@ -28,6 +28,7 @@ public with sharing class DemoStepPublisher {
   private Boolean sequenced = true;
   private List<Integer> pendingRowsDone;
   private List<Integer> pendingRowsFailed;
+  private Integer pendingAsyncExecutions;
   private Integer progressSteps = 0;
 
   public DemoStepPublisher(
@@ -99,6 +100,7 @@ public with sharing class DemoStepPublisher {
   }
 
   public void succeed(DemoResult result) {
+    pendingAsyncExecutions = result?.asyncExecutions;
     emit(
       PHASE_SUCCEEDED,
       'Succeeded',
@@ -176,8 +178,10 @@ public with sharing class DemoStepPublisher {
       Records_Failed__c = recordsFailed,
       Async_Job_Id__c = asyncJobId,
       Rows_Done__c = joinRows(pendingRowsDone),
-      Rows_Failed__c = joinRows(pendingRowsFailed)
+      Rows_Failed__c = joinRows(pendingRowsFailed),
+      Async_Executions__c = pendingAsyncExecutions
     );
+    pendingAsyncExecutions = null;
     pendingRowsDone = null;
     pendingRowsFailed = null;
     if (metrics != null) {

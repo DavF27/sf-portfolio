@@ -14,6 +14,12 @@ const TERMINAL_STATUSES = new Set(["Succeeded", "Failed"]);
 /** An asynchronous run silent for this long is checked by its demo monitor. */
 export const IDLE_MS = 20000;
 const WATCH_INTERVAL_MS = 5000;
+const RACE_TICK_MS = 500;
+const RACE_MODES = ["BEFORE", "AFTER"];
+const RACE_SUBTITLES = {
+  BEFORE: "Current implementation",
+  AFTER: "Fixed implementation"
+};
 const LIMIT_PATTERN = /Too many (SOQL queries|DML statements|DML rows): (\d+)/;
 const LIMIT_FIELDS = {
   "SOQL queries": "soqlQueries",
@@ -169,6 +175,9 @@ export default class DemoPanel extends LightningElement {
   watchdog;
   monitoring = false;
   lastEventAt = 0;
+  race;
+  raceTicker;
+  now = Date.now();
 
   @wire(getDemos)
   wiredDemos({ data, error }) {
@@ -192,6 +201,7 @@ export default class DemoPanel extends LightningElement {
 
   disconnectedCallback() {
     this.stopWatchdog();
+    this.stopRaceTicker();
     if (this.subscription) {
       unsubscribe(this.subscription, () => {});
       this.subscription = undefined;
@@ -233,6 +243,10 @@ export default class DemoPanel extends LightningElement {
 
   handleStepMessage(message) {
     const payload = message?.data?.payload;
+    if (payload && this.race) {
+      this.applyRaceStep(payload);
+      return;
+    }
     if (
       !payload ||
       !this.activeRun ||
@@ -273,9 +287,150 @@ export default class DemoPanel extends LightningElement {
     };
   }
 
+  /** Runs BEFORE and AFTER at the same time (each mode on its own data) and shows them side by side. */
+  async handleRace(event) {
+    const { demo } = event.currentTarget.dataset;
+    const definition = this.demos.find((item) => item.name === demo);
+    const volume = this.volumes[demo] ?? definition?.defaultVolume;
+    const chaos = this.chaosByDemo[demo] === true;
+    this.stopWatchdog();
+    this.activeRun = undefined;
+    this.isRunning = true;
+    this.now = Date.now();
+    const lanes = {};
+    RACE_MODES.forEach((mode) => {
+      lanes[mode] = {
+        key: mode,
+        label: mode,
+        subtitle: RACE_SUBTITLES[mode],
+        runKey: newRunKey(),
+        status: "Running",
+        processed: 0,
+        total: volume,
+        executions: null,
+        finishedAt: null,
+        message: null
+      };
+    });
+    this.race = {
+      label: definition?.label || demo,
+      volume,
+      startedAt: this.now,
+      lanes
+    };
+    this.startRaceTicker();
+    try {
+      await Promise.all(
+        RACE_MODES.map(async (mode) => {
+          const request = {
+            demoName: demo,
+            mode,
+            volume,
+            chaos,
+            runKey: lanes[mode].runKey
+          };
+          try {
+            const response = await runDemo(request);
+            if (response.status !== "Running") {
+              this.updateRaceLane(mode, {
+                status: response.status,
+                message: response.errorMessage || response.result?.message
+              });
+            }
+          } catch (error) {
+            this.updateRaceLane(mode, {
+              status: "Failed",
+              message: reduceError(error)
+            });
+          }
+        })
+      );
+    } finally {
+      this.isRunning = false;
+      this.loadRuns();
+    }
+  }
+
+  applyRaceStep(payload) {
+    const mode = RACE_MODES.find(
+      (item) => this.race.lanes[item].runKey === payload.Run_Key__c
+    );
+    if (!mode) {
+      return;
+    }
+    const lane = this.race.lanes[mode];
+    const changes = {
+      processed: Math.max(lane.processed, payload.Records_Processed__c ?? 0),
+      executions: payload.Async_Executions__c ?? lane.executions
+    };
+    if (TERMINAL_PHASES.has(payload.Phase__c)) {
+      changes.status =
+        payload.Phase__c === "SUCCEEDED" ? "Succeeded" : "Failed";
+      changes.message = payload.Message__c;
+      this.loadRuns();
+    }
+    this.updateRaceLane(mode, changes);
+  }
+
+  updateRaceLane(mode, changes) {
+    if (!this.race) {
+      return;
+    }
+    const lane = this.race.lanes[mode];
+    if (TERMINAL_STATUSES.has(lane.status)) {
+      return;
+    }
+    const updated = { ...lane, ...changes };
+    if (TERMINAL_STATUSES.has(updated.status)) {
+      updated.finishedAt = Date.now();
+    }
+    this.race = {
+      ...this.race,
+      lanes: { ...this.race.lanes, [mode]: updated }
+    };
+    if (
+      RACE_MODES.every((item) =>
+        TERMINAL_STATUSES.has(this.race.lanes[item].status)
+      )
+    ) {
+      this.stopRaceTicker();
+    }
+  }
+
+  startRaceTicker() {
+    this.stopRaceTicker();
+    // eslint-disable-next-line @lwc/lwc/no-async-operation -- live chronometer of the race lanes
+    this.raceTicker = setInterval(() => {
+      this.now = Date.now();
+    }, RACE_TICK_MS);
+  }
+
+  stopRaceTicker() {
+    if (this.raceTicker) {
+      clearInterval(this.raceTicker);
+      this.raceTicker = undefined;
+    }
+    this.now = Date.now();
+  }
+
+  get raceLanes() {
+    if (!this.race) {
+      return [];
+    }
+    return RACE_MODES.map((mode) => {
+      const lane = this.race.lanes[mode];
+      return {
+        ...lane,
+        elapsedMs: (lane.finishedAt ?? this.now) - this.race.startedAt
+      };
+    });
+  }
+
   async handleRun(event) {
     const { demo, mode } = event.currentTarget.dataset;
     const definition = this.demos.find((item) => item.name === demo);
+    this.race = undefined;
+    this.stopRaceTicker();
     const request = {
       demoName: demo,
       mode,
@@ -430,6 +585,7 @@ export default class DemoPanel extends LightningElement {
       chaos: this.chaosByDemo[demo.name] === true,
       volumeLabel: `Volume (max ${demo.maxVolume})`,
       beforeLabel: `Run ${demo.label} in BEFORE mode`,
+      raceLabel: `Run ${demo.label} in BEFORE and AFTER mode at the same time`,
       afterLabel: `Run ${demo.label} in AFTER mode`
     }));
   }

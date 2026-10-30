@@ -52,6 +52,10 @@ Contraintes découvertes en Phase 2 (mesurées, preuves dans la CI) :
 - les tests Apex n'exécutent qu'un niveau de Queueable et `Test.stopTest()` s'arrête au premier job en échec : l'enchaînement est rejoué
   maillon par maillon (`AsyncChain`), l'isolement entre lots est prouvé par la CI ; un Transaction Finalizer s'exécute bien dans les tests ;
 - des jobs asynchrones parallèles qui ferment un run doivent se sérialiser (`FOR UPDATE` sur l'enregistrement parent) ;
+- Developer Edition : **10 000 livraisons de Platform Events par jour** (`DailyDeliveredPlatformEvents`, mesuré) : les batchs publient
+  leur progression par paliers (20 étapes par run au plus) ;
+- un test Apex n'exécute qu'un seul `execute()` par `Database.executeBatch` : un batch à lot de 1 est rejoué start / execute / finish ;
+- un champ formule ne peut pas être affecté en Apex, même en mémoire : construire l'enregistrement par `JSON.deserialize` dans les tests ;
 - l'URL _frontdoor_ de `sf org open --url-only` est **à usage unique** : Playwright se connecte une fois (global setup) et réutilise la session ;
 - quota de scratch orgs atteint le 2026-10-29 (6 créations) : regrouper les push qui déclenchent la CI. Mesuré le 2026-10-30 à 10 h 43 :
   `DailyScratchOrgs` = 6/6 disponibles alors que 6 orgs avaient été créées moins de 24 h avant ; le compteur se réinitialise donc plus tôt que
@@ -251,12 +255,16 @@ puis surveille chaque run asynchrone avant le suivant.
 Mécanisme : un batch parcourt tout le stock et filtre en Apex, record par record ; un batch équivalent filtre dans la requête
 (formule ou date calculée) et ne traite que les éligibles.
 
-- [ ] Modèle : `Renewal_Demo__c` avec date de début et préavis ; formule d'éligibilité.
-- [ ] AVANT : `start` sans filtre, scope 1, filtre en Apex.
-- [ ] APRÈS : filtre en SOQL, scope adapté.
-- [ ] Mesure via `AsyncApexJob` (durée, `TotalJobItems`). Vitrine : environ 1 000 records ; CI scratch org : environ 2 000+.
+- [x] Modèle : `Renewal_Demo__c` avec date de début, durée, préavis ; formule `Notice_Deadline__c` ; `Lane__c` pour que les deux modes
+      courent en même temps sur des stocks séparés. 1 contrat sur 20 est dû.
+- [x] AVANT (`RenewalNoticeBatchBefore`) : `start` sans filtre, taille de lot 1, filtre en Apex.
+- [x] APRÈS (`RenewalNoticeBatchAfter`) : filtre en SOQL sur la formule, taille de lot 200. Mêmes avis envoyés (test de comparaison).
+- [x] Mesure via `AsyncApexJob` (`JobItemsProcessed` → `Demo_Run__c.Async_Executions__c`, durée jusqu'au `finish`).
+      Vitrine : 500 contrats par couloir ; CI : 1 000 par couloir (au lieu de 2 000+, à ajuster selon la durée mesurée de l'AVANT).
+- [x] Visuel : bouton _Race_ (interface `DemoRaceable`), composant `raceLanes` (progression, chronomètre, exécutions, premier arrivé).
+- [x] Tests : 122 tests Apex, 41 tests Jest, 22 tests de scripts. Fiche [docs/demos/batch-filter.md](docs/demos/batch-filter.md).
 
-**Preuve :** tableau durée / exécutions avant-après produit par la CI.
+**Preuve :** tableau durée / exécutions avant-après produit par la CI (à compléter après le run).
 
 ### Phase 6 — Outillage DevOps
 

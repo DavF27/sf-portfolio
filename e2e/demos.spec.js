@@ -51,6 +51,13 @@ const DEMOS = [
       summary: "45 succeeded, 5 failed",
       timeout: 4 * 60 * 1000
     }
+  },
+  {
+    name: "Batch_Filter",
+    slug: "batch-filter",
+    volume: "200",
+    // BEFORE and AFTER race side by side, each on its own lane of renewals.
+    race: true
   }
 ];
 
@@ -88,6 +95,27 @@ async function fullPageCapture(page, dir, file) {
   await page.screenshot({ path: path.join(dir, file), fullPage: true });
 }
 
+function laneStatus(page, mode) {
+  return page.locator(
+    `[data-id="lane"][data-mode="${mode}"] [data-id="lane-status"]`
+  );
+}
+
+/** Race: capture when AFTER has finished while BEFORE is still going, then when both are done. */
+async function runRace(page, card, dir) {
+  await card.locator('[data-id="race-button"] button').click();
+  await expect(laneStatus(page, "AFTER")).toHaveText("Succeeded", {
+    timeout: 5 * 60 * 1000
+  });
+  await page.waitForTimeout(2000);
+  await fullPageCapture(page, dir, "race.png");
+  await expect(laneStatus(page, "BEFORE")).toHaveText("Succeeded", {
+    timeout: 20 * 60 * 1000
+  });
+  await page.waitForTimeout(2000);
+  await fullPageCapture(page, dir, "race-finished.png");
+}
+
 async function runMode(page, card, mode, expected) {
   const timeout = expected.timeout;
   await card.locator(`lightning-button[data-mode="${mode}"] button`).click();
@@ -114,6 +142,10 @@ for (const demo of DEMOS) {
       // Asynchronous demo: jobs, then 20 s of silence before the panel monitor, in both modes.
       test.setTimeout(12 * 60 * 1000);
     }
+    if (demo.race) {
+      // The BEFORE batch runs one execution per record.
+      test.setTimeout(25 * 60 * 1000);
+    }
     const dir = path.join(SCREENSHOT_ROOT, demo.slug);
     fs.mkdirSync(dir, { recursive: true });
 
@@ -125,26 +157,29 @@ for (const demo of DEMOS) {
     await card.scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(dir, "panel.png") });
     await card.locator('[data-id="volume-input"] input').fill(demo.volume);
-    if (demo.chaosFirst) {
-      await card
-        .locator('[data-id="chaos-toggle"] input[type="checkbox"]')
-        .check({ force: true });
+    if (demo.race) {
+      await runRace(page, card, dir);
+    } else {
+      if (demo.chaosFirst) {
+        await card
+          .locator('[data-id="chaos-toggle"] input[type="checkbox"]')
+          .check({ force: true });
+      }
+
+      await runMode(page, card, "BEFORE", demo.before);
+      await fullPageCapture(page, dir, "before.png");
+
+      await runMode(page, card, "AFTER", demo.after);
+      await fullPageCapture(page, dir, "after.png");
+
+      if (demo.chaos) {
+        await card
+          .locator('[data-id="chaos-toggle"] input[type="checkbox"]')
+          .check({ force: true });
+        await runMode(page, card, "AFTER", demo.chaos);
+        await fullPageCapture(page, dir, "chaos.png");
+      }
     }
-
-    await runMode(page, card, "BEFORE", demo.before);
-    await fullPageCapture(page, dir, "before.png");
-
-    await runMode(page, card, "AFTER", demo.after);
-    await fullPageCapture(page, dir, "after.png");
-
-    if (demo.chaos) {
-      await card
-        .locator('[data-id="chaos-toggle"] input[type="checkbox"]')
-        .check({ force: true });
-      await runMode(page, card, "AFTER", demo.chaos);
-      await fullPageCapture(page, dir, "chaos.png");
-    }
-
     const video = page.video();
     await page.close();
     if (video) {

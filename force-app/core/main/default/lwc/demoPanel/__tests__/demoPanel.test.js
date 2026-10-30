@@ -568,6 +568,169 @@ describe("c-demo-panel asynchronous runs", () => {
   });
 });
 
+describe("c-demo-panel race", () => {
+  const RACE_DEMO = {
+    name: "Batch_Filter",
+    label: "Batch Filter",
+    description: "Batch",
+    defaultMode: "BEFORE",
+    defaultVolume: 500,
+    maxVolume: 1000,
+    hasSeeder: true,
+    hasMonitor: false,
+    supportsRace: true
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers({
+      doNotFake: ["setTimeout", "queueMicrotask", "nextTick"]
+    });
+    getRecentRuns.mockResolvedValue([]);
+    getLimits.mockResolvedValue(LIMITS);
+    runDemo.mockImplementation((request) =>
+      Promise.resolve({
+        runKey: request.runKey,
+        status: "Running",
+        result: { pending: true },
+        metrics: {}
+      })
+    );
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+    jest.clearAllMocks();
+    jest.useRealTimers();
+  });
+
+  async function startRace() {
+    const element = createElement("c-demo-panel", { is: DemoPanel });
+    document.body.appendChild(element);
+    getDemos.emit([RACE_DEMO, DEMOS[0]]);
+    await flushPromises();
+    element.shadowRoot.querySelector('[data-id="race-button"]').click();
+    await flushPromises();
+    const keys = Object.fromEntries(
+      runDemo.mock.calls.map(([request]) => [request.mode, request.runKey])
+    );
+    return { element, keys };
+  }
+
+  function lanes(element) {
+    return element.shadowRoot.querySelector('[data-id="race-lanes"]').lanes;
+  }
+
+  it("offers the race only on demos that support it", async () => {
+    const element = createElement("c-demo-panel", { is: DemoPanel });
+    document.body.appendChild(element);
+    getDemos.emit([RACE_DEMO, DEMOS[0]]);
+    await flushPromises();
+
+    expect(
+      element.shadowRoot.querySelectorAll('[data-id="race-button"]')
+    ).toHaveLength(1);
+  });
+
+  it("runs both modes at once and races them live", async () => {
+    const { element, keys } = await startRace();
+
+    expect(runDemo).toHaveBeenCalledTimes(2);
+    expect(runDemo.mock.calls.map(([request]) => request.mode)).toEqual([
+      "BEFORE",
+      "AFTER"
+    ]);
+    expect(keys.BEFORE).not.toBe(keys.AFTER);
+    expect(lanes(element).map((lane) => lane.status)).toEqual([
+      "Running",
+      "Running"
+    ]);
+
+    jest.advanceTimersByTime(2000);
+    jestMockPublish(
+      CHANNEL,
+      stepMessage(keys.BEFORE, "STEP", { Records_Processed__c: 25 })
+    );
+    jestMockPublish(
+      CHANNEL,
+      stepMessage(keys.AFTER, "SUCCEEDED", {
+        Records_Processed__c: 500,
+        Async_Executions__c: 1,
+        Message__c: "1 execution(s), 25 notice(s) sent"
+      })
+    );
+    jestMockPublish(CHANNEL, stepMessage("unknown-run-key", "STEP"));
+    await flushPromises();
+
+    let [before, after] = lanes(element);
+    expect(before.processed).toBe(25);
+    expect(before.status).toBe("Running");
+    expect(after.status).toBe("Succeeded");
+    expect(after.executions).toBe(1);
+    expect(after.elapsedMs).toBe(2000);
+
+    jest.advanceTimersByTime(8000);
+    await flushPromises();
+    [before, after] = lanes(element);
+    expect(before.elapsedMs).toBe(10000);
+    // A finished lane keeps its time.
+    expect(after.elapsedMs).toBe(2000);
+
+    jestMockPublish(
+      CHANNEL,
+      stepMessage(keys.BEFORE, "SUCCEEDED", {
+        Records_Processed__c: 500,
+        Async_Executions__c: 500
+      })
+    );
+    jestMockPublish(CHANNEL, stepMessage(keys.BEFORE, "FAILED"));
+    await flushPromises();
+    [before] = lanes(element);
+    // The first terminal event wins.
+    expect(before.status).toBe("Succeeded");
+    expect(before.executions).toBe(500);
+  });
+
+  it("shows a lane that could not start as failed", async () => {
+    runDemo.mockImplementation((request) => {
+      if (request.mode === "BEFORE") {
+        return Promise.reject({
+          body: { message: "The previous BEFORE batch is still running" }
+        });
+      }
+      return Promise.resolve({
+        runKey: request.runKey,
+        status: "Failed",
+        errorMessage: "Chaos injected"
+      });
+    });
+    const { element } = await startRace();
+
+    const [before, after] = lanes(element);
+    expect(before.status).toBe("Failed");
+    expect(before.message).toContain("still running");
+    expect(after.status).toBe("Failed");
+    expect(after.message).toBe("Chaos injected");
+  });
+
+  it("leaves the race view when a single run starts", async () => {
+    const { element } = await startRace();
+
+    element.shadowRoot
+      .querySelectorAll('lightning-button[data-mode="AFTER"]')[1]
+      .click();
+    await flushPromises();
+
+    expect(
+      element.shadowRoot.querySelector('[data-id="race-lanes"]')
+    ).toBeNull();
+    expect(
+      element.shadowRoot.querySelector('[data-id="run-status"]')
+    ).not.toBeNull();
+  });
+});
+
 describe("demoPanel helpers", () => {
   it("parses the rows carried by a step", () => {
     expect(parseRows("3, 4,5")).toEqual([3, 4, 5]);

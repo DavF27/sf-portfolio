@@ -80,6 +80,18 @@
                     onclick={handleRun}
                   ></lightning-button>
                 </div>
+                <template lwc:if={demo.supportsRace}>
+                  <lightning-button
+                    label="Race BEFORE vs AFTER"
+                    title={demo.raceLabel}
+                    icon-name="utility:flow"
+                    class="slds-m-top_x-small slds-show"
+                    data-demo={demo.name}
+                    data-id="race-button"
+                    disabled={isRunning}
+                    onclick={handleRace}
+                  ></lightning-button>
+                </template>
               </article>
             </template>
           </template>
@@ -95,7 +107,13 @@
           aria-label="Current run"
           data-id="active-run"
         >
-          <template lwc:if={hasActiveRun}>
+          <template lwc:if={race}>
+            <h2 class="slds-text-heading_small slds-m-bottom_small">
+              {race.label} · race · volume {race.volume}
+            </h2>
+            <c-race-lanes lanes={raceLanes} data-id="race-lanes"></c-race-lanes>
+          </template>
+          <template lwc:elseif={hasActiveRun}>
             <div
               class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small"
             >

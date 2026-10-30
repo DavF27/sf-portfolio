@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Batch: Apex vs SOQL Filter</label>
+    <protected>false</protected>
+    <values>
+        <field>Mode__c</field>
+        <value xsi:type="xsd:string">BEFORE</value>
+    </values>
+    <values>
+        <field>Before_Class__c</field>
+        <value xsi:type="xsd:string">RenewalNoticeStrategy</value>
+    </values>
+    <values>
+        <field>After_Class__c</field>
+        <value xsi:type="xsd:string">RenewalNoticeStrategy</value>
+    </values>
+    <values>
+        <field>Seeder_Class__c</field>
+        <value xsi:type="xsd:string">RenewalNoticeSeeder</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >A nightly batch sends renewal notices to the ~5% of contracts due. BEFORE: scans the whole stock, batch size 1, filter in Apex. AFTER: filter in the SOQL of start(). Race runs both modes side by side.</value>
+    </values>
+    <values>
+        <field>Default_Volume__c</field>
+        <value xsi:type="xsd:double">500.0</value>
+    </values>
+    <values>
+        <field>Max_Volume__c</field>
+        <value xsi:type="xsd:double">1000.0</value>
+    </values>
+    <values>
+        <field>Sort_Order__c</field>
+        <value xsi:type="xsd:double">4.0</value>
+    </values>
+    <values>
+        <field>Is_Active__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

@@ -27,6 +27,7 @@ private class DemoStepPublisherTest {
     Assert.areEqual(3, events[2].Sequence__c);
     Assert.areEqual(request.runKey, events[2].Run_Key__c);
     Assert.areEqual(10, events[2].Records_Processed__c);
+    Assert.isNull(events[2].Async_Executions__c);
     Assert.areEqual(Limits.getLimitQueries(), events[2].SOQL_Limit__c);
     Assert.areEqual(Limits.getLimitDmlStatements(), events[2].DML_Limit__c);
     Assert.areEqual(

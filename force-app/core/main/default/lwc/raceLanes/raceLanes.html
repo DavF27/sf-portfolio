@@ -1,0 +1,63 @@
+<template>
+  <div class="race slds-grid slds-wrap slds-gutters" data-id="race">
+    <template for:each={items} for:item="lane">
+      <section
+        key={lane.key}
+        class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2"
+        aria-label={lane.label}
+        data-id="lane"
+        data-mode={lane.key}
+      >
+        <div class="slds-box race__lane">
+          <div
+            class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center"
+          >
+            <h3 class="slds-text-heading_small">{lane.label}</h3>
+            <span class={lane.badgeClass} data-id="lane-status"
+              >{lane.status}</span
+            >
+          </div>
+          <p
+            class="slds-text-body_small slds-text-color_weak slds-m-bottom_x-small"
+          >
+            {lane.subtitle}
+          </p>
+          <c-progress-bar
+            label="Stock covered"
+            value={lane.processed}
+            max={lane.total}
+            failed={lane.failed}
+          ></c-progress-bar>
+          <dl class="slds-grid slds-m-top_small race__stats">
+            <div class="slds-col">
+              <dt class="slds-text-title">Elapsed</dt>
+              <dd class="race__value" data-id="lane-elapsed">{lane.elapsed}</dd>
+            </div>
+            <div class="slds-col">
+              <dt class="slds-text-title">Executions</dt>
+              <dd class="race__value" data-id="lane-executions">
+                {lane.executions}
+              </dd>
+            </div>
+          </dl>
+          <template lwc:if={lane.winner}>
+            <p
+              class="slds-text-color_success slds-m-top_x-small"
+              data-id="lane-winner"
+            >
+              Finished first
+            </p>
+          </template>
+          <template lwc:if={lane.message}>
+            <p
+              class="slds-text-body_small slds-m-top_x-small"
+              data-id="lane-message"
+            >
+              {lane.message}
+            </p>
+          </template>
+        </div>
+      </section>
+    </template>
+  </div>
+</template>

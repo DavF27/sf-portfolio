@@ -86,7 +86,8 @@ async function main() {
       if (outcome.response?.status === "Running") {
         // Asynchronous demo: the next run resets the same records. Let these jobs finish, then hand the
         // run to the demo monitor if no job closed it (silent failure), while its records are still there.
-        await waitForAsyncJobs(targetOrg, 600);
+        // A batch with one execution per record can take a while: up to 30 minutes.
+        await waitForAsyncJobs(targetOrg, 1800);
         const { missing } = await pollRuns([run.runKey], targetOrg, 30);
         if (missing.length > 0) {
           const response = monitorRun(run, targetOrg);

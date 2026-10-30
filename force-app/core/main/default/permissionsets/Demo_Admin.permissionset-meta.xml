@@ -7,6 +7,11 @@
     <description
   >Run the portfolio demos from the panel and read their measured metrics.</description>
     <fieldPermissions>
+        <editable>false</editable>
+        <field>Demo_Run__c.Async_Executions__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>true</editable>
         <field>Demo_Run__c.Async_Job_Id__c</field>
         <readable>true</readable>

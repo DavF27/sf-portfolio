@@ -155,6 +155,7 @@ private class DemoControllerTest {
     Test.stopTest();
 
     Assert.isTrue(demos[0].hasMonitor);
+    Assert.isTrue(demos[0].supportsRace);
     Assert.areEqual(DemoStepHandler.STATUS_SUCCEEDED, response.status);
   }
 
@@ -179,5 +180,6 @@ private class DemoControllerTest {
     Test.stopTest();
 
     Assert.isFalse(demos[0].hasMonitor);
+    Assert.isFalse(demos[0].supportsRace);
   }
 }

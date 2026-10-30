@@ -155,6 +155,7 @@ test("toMarkdown renders one row per run and escapes errors", () => {
         Status__c: "Succeeded",
         Chaos__c: true,
         SOQL_Queries__c: 1,
+        Async_Executions__c: 3,
         Records_Processed__c: 150
       }
     ],
@@ -177,6 +178,19 @@ test("withLimit shows consumption next to the limit when known", () => {
   assert.equal(report.withLimit(101, 100), "101 / 100");
   assert.equal(report.withLimit(3, null), "3");
   assert.equal(report.withLimit(null, 100), "");
+});
+
+test("toMarkdown shows the asynchronous executions of a run", () => {
+  const markdown = report.toMarkdown([
+    {
+      Demo__c: "Batch",
+      Mode__c: "BEFORE",
+      Status__c: "Succeeded",
+      Async_Executions__c: 500
+    }
+  ]);
+  assert.ok(markdown.includes("Async executions"));
+  assert.ok(markdown.includes("| 500 |"));
 });
 
 test("parseArgs reads flags and values", () => {

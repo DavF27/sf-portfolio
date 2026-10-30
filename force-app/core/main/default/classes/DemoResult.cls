@@ -16,6 +16,9 @@ public with sharing class DemoResult {
   /** True when the strategy enqueued asynchronous work that will publish the outcome of the run itself. */
   @AuraEnabled
   public Boolean pending = false;
+  /** Asynchronous executions of the run (batch execute calls), when relevant. */
+  @AuraEnabled
+  public Integer asyncExecutions;
 
   public DemoResult() {
     this(0, 0);
