@@ -155,6 +155,32 @@ public class DemoTestFactory {
   public class NotAStrategy {
   }
 
+  /** Asynchronous demo double: execute() leaves the run pending, inspect() returns what the test sets. */
+  public class MonitoredStrategy implements DemoStrategy, DemoMonitor {
+    public DemoResult execute(DemoContext context) {
+      DemoResult result = new DemoResult(context.volume, 0);
+      result.pending = true;
+      result.message = 'Enqueued ' + context.volume + ' jobs';
+      return result;
+    }
+
+    public DemoResult inspect(DemoContext context) {
+      return inspection;
+    }
+  }
+
+  public static DemoResult inspection = new DemoResult();
+
+  public static Demo_Setting__mdt registerMonitored() {
+    Demo_Setting__mdt demo = setting(
+      DEMO,
+      'DemoTestFactory.MonitoredStrategy',
+      'DemoTestFactory.MonitoredStrategy'
+    );
+    register(new List<Demo_Setting__mdt>{ demo });
+    return demo;
+  }
+
   public class RunSeeder implements DemoDataSeeder {
     public Integer seed(Integer volume, SyntheticDataGenerator generator) {
       List<Demo_Run__c> records = new List<Demo_Run__c>();

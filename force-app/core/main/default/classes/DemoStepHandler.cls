@@ -166,9 +166,17 @@ public with sharing class DemoStepHandler {
       run.Error_Message__c = event.Message__c;
       applyLimitFromMessage(run, event.Message__c);
     }
-    // Event timestamps only have second precision: fall back on them only when no step measured the duration.
-    if (run.Duration_Ms__c == null && run.Started_At__c != null) {
-      run.Duration_Ms__c = occurredAt.getTime() - run.Started_At__c.getTime();
+    // Event timestamps only have second precision: fall back on them only when no step measured the
+    // duration, or when an asynchronous job closes the run (the synchronous part only measured itself).
+    Boolean closedByAsyncJob = String.isNotBlank(event.Async_Job_Id__c);
+    if (
+      run.Started_At__c != null &&
+      (run.Duration_Ms__c == null || closedByAsyncJob)
+    ) {
+      run.Duration_Ms__c = maxOf(
+        run.Duration_Ms__c,
+        occurredAt.getTime() - run.Started_At__c.getTime()
+      );
     }
   }
 

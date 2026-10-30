@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Unit_Price_Required_To_Activate</fullName>
+    <active>true</active>
+    <description
+  >A line cannot be activated without a positive unit price. Used by the Chaos switch to trap one line.</description>
+    <errorConditionFormula
+  >AND(ISPICKVAL(Status__c, &apos;Active&apos;), OR(ISBLANK(Unit_Price__c), Unit_Price__c &lt;= 0))</errorConditionFormula>
+    <errorDisplayField>Unit_Price__c</errorDisplayField>
+    <errorMessage
+  >Unit price must be greater than zero to activate a line.</errorMessage>
+</ValidationRule>

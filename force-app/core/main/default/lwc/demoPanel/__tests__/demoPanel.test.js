@@ -3,7 +3,9 @@ import DemoPanel, {
   CHANNEL,
   extractLimitBreach,
   reduceError,
-  summarizeError
+  summarizeError,
+  parseRows,
+  IDLE_MS
 } from "c/demoPanel";
 import {
   subscribe,
@@ -16,6 +18,7 @@ import getLimits from "@salesforce/apex/DemoController.getLimits";
 import runDemo from "@salesforce/apex/DemoController.runDemo";
 import recordUncaughtFailure from "@salesforce/apex/DemoController.recordUncaughtFailure";
 import getRecentRuns from "@salesforce/apex/DemoController.getRecentRuns";
+import monitorRun from "@salesforce/apex/DemoController.monitorRun";
 
 jest.mock(
   "@salesforce/apex/DemoController.getDemos",
@@ -37,6 +40,11 @@ jest.mock(
 );
 jest.mock(
   "@salesforce/apex/DemoController.recordUncaughtFailure",
+  () => ({ default: jest.fn() }),
+  { virtual: true }
+);
+jest.mock(
+  "@salesforce/apex/DemoController.monitorRun",
   () => ({ default: jest.fn() }),
   { virtual: true }
 );
@@ -397,7 +405,176 @@ describe("c-demo-panel", () => {
   });
 });
 
+describe("c-demo-panel asynchronous runs", () => {
+  const ASYNC_DEMO = {
+    name: "Async_Chain_Break",
+    label: "Silent Async Chain",
+    description: "Queueables",
+    defaultMode: "BEFORE",
+    defaultVolume: 10,
+    maxVolume: 100,
+    hasSeeder: true,
+    hasMonitor: true
+  };
+
+  beforeEach(() => {
+    // Fake the watchdog interval and Date only; flushPromises keeps a real setTimeout.
+    jest.useFakeTimers({
+      doNotFake: ["setTimeout", "queueMicrotask", "nextTick"]
+    });
+    getRecentRuns.mockResolvedValue([]);
+    getLimits.mockResolvedValue(LIMITS);
+    runDemo.mockImplementation((request) =>
+      Promise.resolve({
+        runKey: request.runKey,
+        status: "Running",
+        result: { pending: true, recordsProcessed: 10, failedRows: [] },
+        metrics: {}
+      })
+    );
+  });
+
+  afterEach(() => {
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+    jest.clearAllMocks();
+    jest.useRealTimers();
+  });
+
+  async function startAsyncRun(demo = ASYNC_DEMO) {
+    const element = createElement("c-demo-panel", { is: DemoPanel });
+    document.body.appendChild(element);
+    getDemos.emit([demo]);
+    await flushPromises();
+    button(element, "BEFORE").click();
+    await flushPromises();
+    return { element, request: runDemo.mock.calls[0][0] };
+  }
+
+  function grid(element) {
+    return element.shadowRoot.querySelector('[data-id="row-grid"]');
+  }
+
+  it("lights rows as jobs report them and closes a silent run as stuck", async () => {
+    monitorRun.mockResolvedValue({
+      status: "Failed",
+      errorMessage: "Detected by monitoring: 3 lines stuck",
+      result: { failedRows: [3, 4, 5] }
+    });
+    const { element, request } = await startAsyncRun();
+
+    jestMockPublish(
+      CHANNEL,
+      stepMessage(request.runKey, "STEP", { Rows_Done__c: "2,1" })
+    );
+    await flushPromises();
+    expect(grid(element).doneRows).toEqual([1, 2]);
+    expect(monitorRun).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(IDLE_MS + 5000);
+    await flushPromises();
+
+    expect(monitorRun).toHaveBeenCalledWith(request);
+    expect(grid(element).status).toBe("Failed");
+    expect(grid(element).failedRows).toEqual([3, 4, 5]);
+    expect(
+      element.shadowRoot.querySelector('[data-id="run-error"]').textContent
+    ).toContain("Detected by monitoring");
+
+    jest.advanceTimersByTime(IDLE_MS * 3);
+    await flushPromises();
+    expect(monitorRun).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps watching while jobs run and stops once a job closes the run", async () => {
+    monitorRun.mockResolvedValue({
+      status: "Running",
+      result: { pending: true }
+    });
+    const { element, request } = await startAsyncRun();
+
+    jest.advanceTimersByTime(IDLE_MS + 5000);
+    await flushPromises();
+    jest.advanceTimersByTime(IDLE_MS + 5000);
+    await flushPromises();
+    expect(monitorRun).toHaveBeenCalledTimes(2);
+
+    jestMockPublish(
+      CHANNEL,
+      stepMessage(request.runKey, "SUCCEEDED", { Rows_Failed__c: "6,7" })
+    );
+    await flushPromises();
+    jest.advanceTimersByTime(IDLE_MS * 3);
+    await flushPromises();
+
+    expect(monitorRun).toHaveBeenCalledTimes(2);
+    expect(grid(element).status).toBe("Succeeded");
+    expect(grid(element).failedRows).toEqual([6, 7]);
+  });
+
+  it("keeps the outcome published by jobs that finished before the response", async () => {
+    let resolveRun;
+    runDemo.mockImplementation(
+      () => new Promise((resolve) => (resolveRun = resolve))
+    );
+    const element = createElement("c-demo-panel", { is: DemoPanel });
+    document.body.appendChild(element);
+    getDemos.emit([ASYNC_DEMO]);
+    await flushPromises();
+    button(element, "AFTER").click();
+    await flushPromises();
+    const { runKey } = runDemo.mock.calls[0][0];
+
+    jestMockPublish(CHANNEL, stepMessage(runKey, "SUCCEEDED"));
+    resolveRun({
+      runKey,
+      status: "Running",
+      result: { pending: true },
+      metrics: {}
+    });
+    await flushPromises();
+    jest.advanceTimersByTime(IDLE_MS * 3);
+    await flushPromises();
+
+    expect(
+      element.shadowRoot.querySelector('[data-id="run-status"]').textContent
+    ).toBe("Succeeded");
+    expect(monitorRun).not.toHaveBeenCalled();
+  });
+
+  it("reports a monitoring error and stops watching", async () => {
+    monitorRun.mockRejectedValue({ body: { message: "No order found" } });
+    const { element } = await startAsyncRun();
+
+    jest.advanceTimersByTime(IDLE_MS + 5000);
+    await flushPromises();
+    jest.advanceTimersByTime(IDLE_MS * 3);
+    await flushPromises();
+
+    expect(monitorRun).toHaveBeenCalledTimes(1);
+    expect(
+      element.shadowRoot.querySelector('[data-id="run-error"]').textContent
+    ).toBe("Monitoring failed: No order found");
+  });
+
+  it("does not watch demos without monitor", async () => {
+    await startAsyncRun({ ...ASYNC_DEMO, hasMonitor: false });
+
+    jest.advanceTimersByTime(IDLE_MS * 3);
+    await flushPromises();
+
+    expect(monitorRun).not.toHaveBeenCalled();
+  });
+});
+
 describe("demoPanel helpers", () => {
+  it("parses the rows carried by a step", () => {
+    expect(parseRows("3, 4,5")).toEqual([3, 4, 5]);
+    expect(parseRows(undefined)).toEqual([]);
+    expect(parseRows("x,0,-1,2")).toEqual([2]);
+  });
+
   it("summarizes errors to their first line, shortened", () => {
     expect(summarizeError(undefined)).toBe("");
     expect(summarizeError("first\r\nsecond")).toBe("first");

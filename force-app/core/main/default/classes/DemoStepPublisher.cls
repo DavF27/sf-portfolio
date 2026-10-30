@@ -26,6 +26,8 @@ public with sharing class DemoStepPublisher {
   private final DemoRunService.Request request;
   private final DemoMetrics metrics;
   private Boolean sequenced = true;
+  private List<Integer> pendingRowsDone;
+  private List<Integer> pendingRowsFailed;
   private Integer progressSteps = 0;
 
   public DemoStepPublisher(
@@ -54,11 +56,34 @@ public with sharing class DemoStepPublisher {
     Integer recordsFailed,
     String message
   ) {
+    step(label, recordsProcessed, recordsFailed, message, null, null);
+  }
+
+  /** Step that also tells the panel which rows (1-based) it completed or failed. */
+  public void step(
+    String label,
+    Integer recordsProcessed,
+    Integer recordsFailed,
+    String message,
+    List<Integer> rowsDone,
+    List<Integer> rowsFailed
+  ) {
     if (progressSteps >= MAX_PROGRESS_STEPS) {
       return;
     }
     progressSteps++;
+    pendingRowsDone = rowsDone;
+    pendingRowsFailed = rowsFailed;
     emit(PHASE_STEP, label, message, recordsProcessed, recordsFailed, null);
+  }
+
+  /**
+   * Asynchronous jobs run in their own transactions, where a per-transaction sequence restarts at 1:
+   * they publish without sequence and the panel keeps them in arrival order, after the synchronous steps.
+   */
+  public DemoStepPublisher withoutSequence() {
+    sequenced = false;
+    return this;
   }
 
   public void succeed(DemoResult result) {
@@ -73,6 +98,7 @@ public with sharing class DemoStepPublisher {
   }
 
   public void fail(String message, DemoResult partial) {
+    pendingRowsFailed = partial?.failedRows;
     emit(
       PHASE_FAILED,
       'Failed',
@@ -103,6 +129,12 @@ public with sharing class DemoStepPublisher {
     );
   }
 
+  private static String joinRows(List<Integer> rows) {
+    return rows == null || rows.isEmpty()
+      ? null
+      : String.join(rows, ',').abbreviate(MAX_LABEL_LENGTH);
+  }
+
   private static Integer nextSequence(String runKey) {
     Integer next = (sequenceByRun.get(runKey) ?? 0) + 1;
     sequenceByRun.put(runKey, next);
@@ -130,8 +162,12 @@ public with sharing class DemoStepPublisher {
       Message__c = message?.abbreviate(MAX_MESSAGE_LENGTH),
       Records_Processed__c = recordsProcessed,
       Records_Failed__c = recordsFailed,
-      Async_Job_Id__c = asyncJobId
+      Async_Job_Id__c = asyncJobId,
+      Rows_Done__c = joinRows(pendingRowsDone),
+      Rows_Failed__c = joinRows(pendingRowsFailed)
     );
+    pendingRowsDone = null;
+    pendingRowsFailed = null;
     if (metrics != null) {
       DemoMetrics.Snapshot snapshot = metrics.snapshot();
       event.SOQL_Queries__c = snapshot.soqlQueries;

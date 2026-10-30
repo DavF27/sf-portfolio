@@ -86,4 +86,39 @@ describe("c-row-grid", () => {
     const huge = render({ total: 10000, status: "Succeeded" });
     expect(states(huge)).toHaveLength(500);
   });
+  it("lights rows reported done out of order and keeps the others pending", () => {
+    const element = render({
+      label: "Rows",
+      total: 5,
+      processed: 1,
+      doneRows: [4, 2],
+      status: "Running"
+    });
+    expect(states(element)).toEqual([
+      "pending",
+      "succeeded",
+      "pending",
+      "succeeded",
+      "pending"
+    ]);
+    expect(summary(element)).toBe("Rows: 2 of 5 done");
+  });
+
+  it("shows stuck rows in red next to the rows already done", () => {
+    const element = render({
+      label: "Rows",
+      total: 5,
+      doneRows: [1, 2],
+      failedRows: [3, 4, 5],
+      status: "Failed"
+    });
+    expect(states(element)).toEqual([
+      "succeeded",
+      "succeeded",
+      "failed",
+      "failed",
+      "failed"
+    ]);
+    expect(summary(element)).toBe("Rows: 2 succeeded, 3 failed");
+  });
 });

@@ -176,4 +176,27 @@ private class DemoStepHandlerTest {
       DemoTestFactory.findRun('bulk-key-199').Records_Processed__c
     );
   }
+
+  @IsTest
+  static void asyncJobClosingTheRunExtendsItsDuration() {
+    String runKey = UUID.randomUUID().toString();
+    Demo_Step__e syncStep = event(runKey, DemoStepPublisher.PHASE_STEP, 1);
+    syncStep.Duration_Ms__c = 40;
+    Demo_Step__e closedByJob = event(
+      runKey,
+      DemoStepPublisher.PHASE_SUCCEEDED,
+      null
+    );
+    closedByJob.Async_Job_Id__c = '707000000000001AAA';
+
+    Test.startTest();
+    EventBus.publish(syncStep);
+    Test.getEventBus().deliver();
+    EventBus.publish(closedByJob);
+    Test.stopTest();
+
+    Demo_Run__c run = DemoTestFactory.findRun(runKey);
+    Assert.areEqual(DemoStepHandler.STATUS_SUCCEEDED, run.Status__c);
+    Assert.isTrue(run.Duration_Ms__c >= 40);
+  }
 }

@@ -13,6 +13,9 @@ public with sharing class DemoResult {
   /** 1-based positions of the rows that failed, for the panel row grid. */
   @AuraEnabled
   public List<Integer> failedRows = new List<Integer>();
+  /** True when the strategy enqueued asynchronous work that will publish the outcome of the run itself. */
+  @AuraEnabled
+  public Boolean pending = false;
 
   public DemoResult() {
     this(0, 0);

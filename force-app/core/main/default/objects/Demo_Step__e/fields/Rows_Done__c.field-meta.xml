@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+  <fullName>Rows_Done__c</fullName>
+  <description
+  >Comma-separated 1-based positions of the rows this step completed (panel row grid).</description>
+  <label>Rows Done</label>
+  <length>255</length>
+  <required>false</required>
+  <type>Text</type>
+</CustomField>

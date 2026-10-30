@@ -81,7 +81,7 @@ jobs:
         run: sf project deploy start --target-org ci --wait 30
 
       - name: Assign permission sets
-        run: sf org assign permset --name Demo_Admin --name Demo_Bulk --name Demo_Order --target-org ci
+        run: sf org assign permset --name Demo_Admin --name Demo_Bulk --name Demo_Order --name Demo_Async --target-org ci
 
       - name: Apex tests
         run: |
@@ -97,7 +97,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run demos and export metrics
-        run: node scripts/run-demos.js --target-org ci --out scripts/out
+        run: node scripts/run-demos.js --target-org ci --out scripts/out --chaos-demo Async_Chain_Break
 
       - name: Run real Bulk API jobs
         run: node scripts/bulk-demo.js --target-org ci --volume 100 --with-chaos --out scripts/out

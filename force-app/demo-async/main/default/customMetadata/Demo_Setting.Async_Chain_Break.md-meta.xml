@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CustomMetadata
+  xmlns="http://soap.sforce.com/2006/04/metadata"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+>
+    <label>Silent Async Chain</label>
+    <protected>false</protected>
+    <values>
+        <field>Mode__c</field>
+        <value xsi:type="xsd:string">BEFORE</value>
+    </values>
+    <values>
+        <field>Before_Class__c</field>
+        <value xsi:type="xsd:string">AsyncOrderStrategy</value>
+    </values>
+    <values>
+        <field>After_Class__c</field>
+        <value xsi:type="xsd:string">AsyncOrderStrategy</value>
+    </values>
+    <values>
+        <field>Seeder_Class__c</field>
+        <value xsi:type="xsd:string">AsyncOrderSeeder</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value
+      xsi:type="xsd:string"
+    >Activates order lines with queueables, in bundles of 5 (Developer Edition chain limit). BEFORE: one chained job per line, a failing line silently stops its chain. AFTER: one job per bundle, one DML, a finalizer logs the failure.</value>
+    </values>
+    <values>
+        <field>Default_Volume__c</field>
+        <value xsi:type="xsd:double">50.0</value>
+    </values>
+    <values>
+        <field>Max_Volume__c</field>
+        <value xsi:type="xsd:double">100.0</value>
+    </values>
+    <values>
+        <field>Sort_Order__c</field>
+        <value xsi:type="xsd:double">3.0</value>
+    </values>
+    <values>
+        <field>Is_Active__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

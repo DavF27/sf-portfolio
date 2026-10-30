@@ -62,6 +62,17 @@ test("buildUncaughtFailureApex keeps the closing quote on long messages", () => 
   assert.match(apex, /'\);$/);
 });
 
+test("buildMonitorApex asks the demo monitor about one run", () => {
+  const apex = report.buildMonitorApex({ ...RUN, chaos: true });
+  assert.match(apex, /DemoRunService\.monitor\(request\)/);
+  assert.match(apex, /request\.chaos = true/);
+  assert.match(apex, /DEMO_RESPONSE/);
+  assert.throws(
+    () => report.buildMonitorApex({ ...RUN, mode: "X" }),
+    /Invalid mode/
+  );
+});
+
 test("buildSeedApex validates inputs", () => {
   assert.match(
     report.buildSeedApex("Bulk_Demo", 500),
@@ -142,6 +153,7 @@ test("toMarkdown renders one row per run and escapes errors", () => {
         Mode__c: "AFTER",
         Volume__c: 150,
         Status__c: "Succeeded",
+        Chaos__c: true,
         SOQL_Queries__c: 1,
         Records_Processed__c: 150
       }
@@ -152,12 +164,12 @@ test("toMarkdown renders one row per run and escapes errors", () => {
   assert.match(markdown, /Commit `abc123` · 2026-10-27/);
   assert.match(
     markdown,
-    /\| Limits_Probe \| BEFORE \| 150 \| ❌ Failed \| 101 \|/
+    /\| Limits_Probe \| BEFORE \| no \| 150 \| ❌ Failed \| 101 \|/
   );
   assert.match(markdown, /Too many \\\| queries line/);
   assert.match(
     markdown,
-    /\| Limits_Probe \| AFTER \| 150 \| ✅ Succeeded \| 1 \|/
+    /\| Limits_Probe \| AFTER \| yes \| 150 \| ✅ Succeeded \| 1 \|/
   );
 });
 

@@ -99,4 +99,38 @@ private class DemoStepPublisherTest {
     Assert.areEqual('Computed', events[1].Message__c);
     Assert.areEqual(3, events[2].Sequence__c);
   }
+
+  @IsTest
+  static void stepsCarryTheirRowsAndAsyncStepsHaveNoSequence() {
+    DemoRunService.Request request = newRequest();
+    DemoStepPublisher asyncPublisher = new DemoStepPublisher(request, null)
+      .withoutSequence();
+
+    Test.startTest();
+    asyncPublisher.step(
+      'Line activated',
+      1,
+      0,
+      null,
+      new List<Integer>{ 7 },
+      null
+    );
+    asyncPublisher.step(
+      'Lines failed',
+      0,
+      2,
+      null,
+      null,
+      new List<Integer>{ 8, 9 }
+    );
+    asyncPublisher.step('No rows', 0, 0, null, new List<Integer>(), null);
+    Test.stopTest();
+
+    List<Demo_Step__e> events = DemoStepPublisher.publishedEvents;
+    Assert.areEqual('7', events[0].Rows_Done__c);
+    Assert.isNull(events[0].Rows_Failed__c);
+    Assert.isNull(events[0].Sequence__c);
+    Assert.areEqual('8,9', events[1].Rows_Failed__c);
+    Assert.isNull(events[2].Rows_Done__c);
+  }
 }

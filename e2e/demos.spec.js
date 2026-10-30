@@ -32,6 +32,25 @@ const DEMOS = [
     // Silent failure: the save succeeds, every snapshot misses the service terms.
     before: { status: "Succeeded", summary: "0 succeeded, 50 failed" },
     after: { status: "Succeeded", summary: "50 succeeded, 0 failed" }
+  },
+  {
+    name: "Async_Chain_Break",
+    slug: "async-chain-break",
+    volume: "50",
+    // Chaos traps one line in both modes. BEFORE: its chain stops silently, the panel monitor detects
+    // the stuck lines after 20 s without news. AFTER: the bundle fails as a whole and is logged.
+    chaosFirst: true,
+    before: {
+      status: "Failed",
+      summary: "47 succeeded, 3 failed",
+      error: "Detected by monitoring",
+      timeout: 4 * 60 * 1000
+    },
+    after: {
+      status: "Succeeded",
+      summary: "45 succeeded, 5 failed",
+      timeout: 4 * 60 * 1000
+    }
   }
 ];
 
@@ -70,13 +89,17 @@ async function fullPageCapture(page, dir, file) {
 }
 
 async function runMode(page, card, mode, expected) {
+  const timeout = expected.timeout;
   await card.locator(`lightning-button[data-mode="${mode}"] button`).click();
   await expect(page.locator('[data-id="run-status"]')).toHaveText(
-    expected.status
+    expected.status,
+    { timeout }
   );
   // The row grid reaches its final state once the server answered and the steps arrived.
   const summary = page.locator('[data-id="row-grid"] [data-id="summary"]');
-  await expect(summary).toContainText(expected.summary || /succeeded|failed/);
+  await expect(summary).toContainText(expected.summary || /succeeded|failed/, {
+    timeout
+  });
   if (expected.error) {
     await expect(page.locator('[data-id="run-error"]')).toContainText(
       expected.error
@@ -87,6 +110,10 @@ async function runMode(page, card, mode, expected) {
 
 for (const demo of DEMOS) {
   test(`${demo.name}: BEFORE fails, AFTER passes`, async ({ page }) => {
+    if (demo.chaosFirst) {
+      // Asynchronous demo: jobs, then 20 s of silence before the panel monitor, in both modes.
+      test.setTimeout(12 * 60 * 1000);
+    }
     const dir = path.join(SCREENSHOT_ROOT, demo.slug);
     fs.mkdirSync(dir, { recursive: true });
 
@@ -98,6 +125,11 @@ for (const demo of DEMOS) {
     await card.scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(dir, "panel.png") });
     await card.locator('[data-id="volume-input"] input').fill(demo.volume);
+    if (demo.chaosFirst) {
+      await card
+        .locator('[data-id="chaos-toggle"] input[type="checkbox"]')
+        .check({ force: true });
+    }
 
     await runMode(page, card, "BEFORE", demo.before);
     await fullPageCapture(page, dir, "before.png");

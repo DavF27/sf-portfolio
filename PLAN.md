@@ -47,6 +47,11 @@ Contraintes découvertes en Phase 2 (mesurées, preuves dans la CI) :
   dans un journal enfant ;
 - `update` en `USER_MODE` refuse un champ master-detail non reparentable présent sur l'enregistrement : mettre à jour des copies ;
 - `Demo_Setting__mdt.getAll()` tronque les champs texte long à **255 caractères** (test de garde dans `DemoCatalogTest`) ;
+- en Developer Edition (vitrine et scratch orgs), une **chaîne de Queueables compte au plus 5 jobs** : la démo asynchrone travaille
+  par lots de 5 lignes, une chaîne par lot ;
+- les tests Apex n'exécutent qu'un niveau de Queueable et `Test.stopTest()` s'arrête au premier job en échec : l'enchaînement est rejoué
+  maillon par maillon (`AsyncChain`), l'isolement entre lots est prouvé par la CI ; un Transaction Finalizer s'exécute bien dans les tests ;
+- des jobs asynchrones parallèles qui ferment un run doivent se sérialiser (`FOR UPDATE` sur l'enregistrement parent) ;
 - l'URL _frontdoor_ de `sf org open --url-only` est **à usage unique** : Playwright se connecte une fois (global setup) et réutilise la session ;
 - quota de scratch orgs atteint le 2026-10-29 (6 créations) : regrouper les push qui déclenchent la CI. Mesuré le 2026-10-30 à 10 h 43 :
   `DailyScratchOrgs` = 6/6 disponibles alors que 6 orgs avaient été créées moins de 24 h avant ; le compteur se réinitialise donc plus tôt que
@@ -213,12 +218,20 @@ réenregistrement. Vitrine : déployée dans `portfolio` le 2026-10-30 (`0Afak00
 Mécanisme : activation ligne par ligne, un Queueable par ligne enchaîné au précédent ; un job qui échoue arrête la chaîne
 sans erreur visible, le groupe reste bloqué dans un état intermédiaire.
 
-- [ ] Modèle : `Order_Demo__c` → `Order_Line_Demo__c` groupées en bundles.
-- [ ] AVANT : chaîne de Queueables + échec injecté (paramètre de démo) → lignes bloquées, aucun signal.
-- [ ] APRÈS : activation du bundle en une DML + `Transaction Finalizer` qui journalise l'échec.
-- [ ] Requête de détection des lignes bloquées (preuve de l'état).
+- [x] Modèle : `Order_Demo__c` → `Order_Bundle_Demo__c` (lots de 5, limite de chaîne en Developer Edition) → `Order_Line_Demo__c`,
+      règle de validation sur le prix unitaire (ligne piégée injectée par Chaos).
+- [x] AVANT (`LineActivationChainJob`) : un job par ligne, enchaîné, sans finalizer ni gestion d'erreur → chaîne arrêtée en silence,
+      lot bloqué en _Activating_, run jamais fermé.
+- [x] APRÈS (`BundleActivationJob` + `BundleActivationFinalizer`) : un job par lot, une mise à jour tout-ou-rien, Transaction Finalizer
+      qui journalise l'échec (lot _Failed_ + cause) ; le dernier lot ferme le run (clôture verrouillée).
+- [x] Requête de détection des lignes bloquées (`AsyncOrderStrategy.inspect`, interface `DemoMonitor`) : appelée par le panneau après 20 s
+      sans nouvelle étape, et par `run-demos.js` une fois les jobs terminés.
+- [x] Socle : runs asynchrones (`DemoResult.pending`), tuiles pilotées ligne par ligne (`Rows_Done__c`, `Rows_Failed__c`), étapes asynchrones
+      sans séquence (ordre d'arrivée).
+- [x] Tests : 109 tests Apex (couverture 98,8 %), 34 tests Jest, 21 tests de scripts. Fiche [docs/demos/async-chain-break.md](docs/demos/async-chain-break.md).
 
 **Preuve :** avant = N lignes bloquées et aucune erreur ; après = 0 ligne bloquée, ou échec journalisé explicitement.
+Mesures de la CI et captures : voir le prochain run (`run-demos.js --chaos-demo Async_Chain_Break`, `docs/screenshots/async-chain-break/`).
 
 ### Phase 5 — Démo « Batch : filtre Apex vs SOQL »
 

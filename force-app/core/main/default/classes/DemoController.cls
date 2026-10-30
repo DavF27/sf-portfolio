@@ -43,6 +43,30 @@ public with sharing class DemoController {
     }
   }
 
+  /** Called by the panel when an asynchronous run stopped publishing: closes it as FAILED if it is stuck. */
+  @AuraEnabled
+  public static DemoRunService.Response monitorRun(
+    String demoName,
+    String mode,
+    Integer volume,
+    Boolean chaos,
+    String runKey
+  ) {
+    try {
+      DemoRunService.Request request = new DemoRunService.Request(
+        demoName,
+        mode,
+        volume
+      );
+      request.chaos = chaos == true;
+      request.runKey = runKey;
+      request.source = DemoRunService.SOURCE_PANEL;
+      return DemoRunService.monitor(request);
+    } catch (DemoException e) {
+      throw toAuraException(e);
+    }
+  }
+
   /** Called by the panel when runDemo died on an uncatchable exception (e.g. Too many SOQL queries). */
   @AuraEnabled
   public static void recordUncaughtFailure(
@@ -146,6 +170,8 @@ public with sharing class DemoController {
     public Integer maxVolume;
     @AuraEnabled
     public Boolean hasSeeder;
+    @AuraEnabled
+    public Boolean hasMonitor;
 
     public DemoDefinition(Demo_Setting__mdt setting) {
       name = setting.DeveloperName;
@@ -155,6 +181,18 @@ public with sharing class DemoController {
       defaultVolume = setting.Default_Volume__c?.intValue();
       maxVolume = setting.Max_Volume__c?.intValue();
       hasSeeder = String.isNotBlank(setting.Seeder_Class__c);
+      hasMonitor = isMonitored(setting);
+    }
+
+    private Boolean isMonitored(Demo_Setting__mdt setting) {
+      try {
+        return DemoStrategyFactory.create(
+          setting,
+          DemoRunService.MODE_BEFORE
+        ) instanceof DemoMonitor;
+      } catch (DemoException e) {
+        return false;
+      }
     }
   }
 }

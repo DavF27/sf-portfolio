@@ -136,4 +136,48 @@ private class DemoControllerTest {
 
     Assert.areEqual(4, failures);
   }
+
+  @IsTest
+  static void monitorsRunsOfMonitoredDemos() {
+    DemoTestFactory.registerMonitored();
+    String runKey = UUID.randomUUID().toString();
+    DemoTestFactory.inspection = new DemoResult(5, 0);
+
+    Test.startTest();
+    List<DemoController.DemoDefinition> demos = DemoController.getDemos();
+    DemoRunService.Response response = DemoController.monitorRun(
+      DemoTestFactory.DEMO,
+      'BEFORE',
+      5,
+      false,
+      runKey
+    );
+    Test.stopTest();
+
+    Assert.isTrue(demos[0].hasMonitor);
+    Assert.areEqual(DemoStepHandler.STATUS_SUCCEEDED, response.status);
+  }
+
+  @IsTest
+  static void monitorRunWrapsErrorsForTheUi() {
+    DemoTestFactory.registerDefault();
+
+    Test.startTest();
+    List<DemoController.DemoDefinition> demos = DemoController.getDemos();
+    try {
+      DemoController.monitorRun(
+        DemoTestFactory.DEMO,
+        'AFTER',
+        1,
+        false,
+        UUID.randomUUID().toString()
+      );
+      Assert.fail('Expected AuraHandledException');
+    } catch (AuraHandledException e) {
+      Assert.isTrue(e.getMessage().endsWith('has no monitor'));
+    }
+    Test.stopTest();
+
+    Assert.isFalse(demos[0].hasMonitor);
+  }
 }

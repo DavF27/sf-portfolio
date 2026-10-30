@@ -5,10 +5,15 @@ import getLimits from "@salesforce/apex/DemoController.getLimits";
 import runDemo from "@salesforce/apex/DemoController.runDemo";
 import recordUncaughtFailure from "@salesforce/apex/DemoController.recordUncaughtFailure";
 import getRecentRuns from "@salesforce/apex/DemoController.getRecentRuns";
+import monitorRun from "@salesforce/apex/DemoController.monitorRun";
 
 export const CHANNEL = "/event/Demo_Step__e";
 const RECENT_RUNS = 10;
 const TERMINAL_PHASES = new Set(["SUCCEEDED", "FAILED"]);
+const TERMINAL_STATUSES = new Set(["Succeeded", "Failed"]);
+/** An asynchronous run silent for this long is checked by its demo monitor. */
+export const IDLE_MS = 20000;
+const WATCH_INTERVAL_MS = 5000;
 const LIMIT_PATTERN = /Too many (SOQL queries|DML statements|DML rows): (\d+)/;
 const LIMIT_FIELDS = {
   "SOQL queries": "soqlQueries",
@@ -106,6 +111,20 @@ function newRunKey() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+/** "3,4,5" -> [3, 4, 5] */
+export function parseRows(text) {
+  return String(text || "")
+    .split(",")
+    .map((row) => Number(row.trim()))
+    .filter((row) => Number.isInteger(row) && row > 0);
+}
+
+function unionRows(current, incoming) {
+  return [...new Set([...(current || []), ...(incoming || [])])].sort(
+    (a, b) => a - b
+  );
+}
+
 function toStep(payload) {
   return {
     phase: payload.Phase__c,
@@ -117,7 +136,9 @@ function toStep(payload) {
     dmlRows: payload.DML_Rows__c,
     cpuTimeMs: payload.CPU_Time_Ms__c,
     recordsProcessed: payload.Records_Processed__c,
-    recordsFailed: payload.Records_Failed__c
+    recordsFailed: payload.Records_Failed__c,
+    rowsDone: parseRows(payload.Rows_Done__c),
+    rowsFailed: parseRows(payload.Rows_Failed__c)
   };
 }
 
@@ -145,6 +166,9 @@ export default class DemoPanel extends LightningElement {
   isRunning = false;
   columns = RUN_COLUMNS;
   subscription;
+  watchdog;
+  monitoring = false;
+  lastEventAt = 0;
 
   @wire(getDemos)
   wiredDemos({ data, error }) {
@@ -167,6 +191,7 @@ export default class DemoPanel extends LightningElement {
   }
 
   disconnectedCallback() {
+    this.stopWatchdog();
     if (this.subscription) {
       unsubscribe(this.subscription, () => {});
       this.subscription = undefined;
@@ -216,12 +241,16 @@ export default class DemoPanel extends LightningElement {
       return;
     }
     const step = toStep(payload);
+    this.lastEventAt = Date.now();
     const updated = {
       ...this.activeRun,
       steps: [...this.activeRun.steps, step],
-      metrics: mergeMetrics(this.activeRun.metrics, step)
+      metrics: mergeMetrics(this.activeRun.metrics, step),
+      doneRows: unionRows(this.activeRun.doneRows, step.rowsDone),
+      failedRows: unionRows(this.activeRun.failedRows, step.rowsFailed)
     };
     if (TERMINAL_PHASES.has(step.phase)) {
+      this.stopWatchdog();
       updated.status = step.phase === "SUCCEEDED" ? "Succeeded" : "Failed";
       updated.error =
         updated.error || (step.phase === "FAILED" ? step.message : undefined);
@@ -254,17 +283,24 @@ export default class DemoPanel extends LightningElement {
       chaos: this.chaosByDemo[demo] === true,
       runKey: newRunKey()
     };
+    this.stopWatchdog();
     this.isRunning = true;
+    this.lastEventAt = Date.now();
     this.activeRun = {
       ...request,
       label: definition?.label || demo,
       status: "Running",
       steps: [],
-      metrics: {}
+      metrics: {},
+      doneRows: [],
+      failedRows: []
     };
     try {
       const response = await runDemo(request);
       this.applyResponse(request.runKey, response);
+      if (this.activeRun?.status === "Running" && definition?.hasMonitor) {
+        this.startWatchdog(request);
+      }
     } catch (error) {
       await this.reportUncaughtFailure(request, reduceError(error));
     } finally {
@@ -281,16 +317,87 @@ export default class DemoPanel extends LightningElement {
       // Limits of the transaction that actually ran the demo.
       this.limits = response.metrics;
     }
+    // Asynchronous jobs may have closed the run before the synchronous response arrived.
+    const closedByJobs =
+      TERMINAL_STATUSES.has(this.activeRun.status) &&
+      response.status === "Running";
     this.activeRun = {
       ...this.activeRun,
-      status: response.status,
+      status: closedByJobs ? this.activeRun.status : response.status,
       error: response.errorMessage,
-      failedRows: response.result?.failedRows || [],
+      failedRows: unionRows(
+        this.activeRun.failedRows,
+        response.result?.failedRows
+      ),
       metrics: mergeMetrics(
         mergeMetrics(this.activeRun.metrics, response.metrics),
         response.result
       )
     };
+  }
+
+  startWatchdog(request) {
+    // eslint-disable-next-line @lwc/lwc/no-async-operation -- periodic check of a silent asynchronous run
+    this.watchdog = setInterval(
+      () => this.checkIdleRun(request),
+      WATCH_INTERVAL_MS
+    );
+  }
+
+  stopWatchdog() {
+    if (this.watchdog) {
+      clearInterval(this.watchdog);
+      this.watchdog = undefined;
+    }
+  }
+
+  /** Nothing published for IDLE_MS: ask the demo monitor whether the run is stuck. */
+  async checkIdleRun(request) {
+    if (
+      this.activeRun?.runKey !== request.runKey ||
+      this.activeRun.status !== "Running"
+    ) {
+      this.stopWatchdog();
+      return;
+    }
+    if (this.monitoring || Date.now() - this.lastEventAt < IDLE_MS) {
+      return;
+    }
+    this.monitoring = true;
+    try {
+      const response = await monitorRun(request);
+      this.lastEventAt = Date.now();
+      if (response.status !== "Running") {
+        this.stopWatchdog();
+        this.applyMonitoring(request.runKey, response);
+      }
+    } catch (error) {
+      this.stopWatchdog();
+      if (this.activeRun?.runKey === request.runKey) {
+        this.activeRun = {
+          ...this.activeRun,
+          error: `Monitoring failed: ${reduceError(error)}`
+        };
+      }
+    } finally {
+      this.monitoring = false;
+    }
+  }
+
+  applyMonitoring(runKey, response) {
+    if (this.activeRun?.runKey !== runKey) {
+      return;
+    }
+    this.activeRun = {
+      ...this.activeRun,
+      status: response.status,
+      error: response.errorMessage || this.activeRun.error,
+      failedRows: unionRows(
+        this.activeRun.failedRows,
+        response.result?.failedRows
+      )
+    };
+    this.loadRuns();
   }
 
   async reportUncaughtFailure(request, message) {

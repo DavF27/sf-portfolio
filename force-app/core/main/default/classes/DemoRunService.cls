@@ -30,15 +30,59 @@ public with sharing class DemoRunService {
         new DemoContext(request, metrics, publisher)
       ) ?? new DemoResult();
       response.result = result;
-      response.status = DemoStepHandler.STATUS_SUCCEEDED;
       response.metrics = metrics.snapshot();
-      publisher.succeed(result);
+      if (result.pending == true) {
+        // The asynchronous work publishes the outcome; the run stays Running until then.
+        response.status = DemoStepHandler.STATUS_RUNNING;
+        publisher.step(
+          'Asynchronous work enqueued',
+          result.recordsProcessed,
+          0,
+          result.message
+        );
+      } else {
+        response.status = DemoStepHandler.STATUS_SUCCEEDED;
+        publisher.succeed(result);
+      }
     } catch (Exception e) {
       response.metrics = metrics.snapshot();
       Database.rollback(savepoint);
       response.status = DemoStepHandler.STATUS_FAILED;
       response.errorMessage = e.getTypeName() + ': ' + e.getMessage();
       publisher.fail(response.errorMessage, null);
+    }
+    return response;
+  }
+
+  /**
+   * Asks the demo whether its asynchronous work is stuck. A stuck run is closed as FAILED with the
+   * stuck rows: in the BEFORE mode of an asynchronous demo, nobody else would ever close it.
+   */
+  public static Response monitor(Request request) {
+    Demo_Setting__mdt setting = validate(request);
+    DemoStrategy strategy = DemoStrategyFactory.create(setting, request.mode);
+    if (!(strategy instanceof DemoMonitor)) {
+      throw new DemoException(setting.DeveloperName + ' has no monitor');
+    }
+    DemoMetrics metrics = new DemoMetrics();
+    DemoStepPublisher publisher = new DemoStepPublisher(request, metrics)
+      .withoutSequence();
+    DemoResult result = ((DemoMonitor) strategy)
+      .inspect(new DemoContext(request, metrics, publisher));
+
+    Response response = new Response(request.runKey);
+    response.result = result;
+    response.metrics = metrics.snapshot();
+    if (result.pending == true) {
+      response.status = DemoStepHandler.STATUS_RUNNING;
+    } else if (result.hasFailures()) {
+      response.status = DemoStepHandler.STATUS_FAILED;
+      response.errorMessage = 'Detected by monitoring: ' + result.message;
+      publisher.fail(response.errorMessage, result);
+    } else {
+      // Finished: close the run in case no job could (first terminal event wins).
+      response.status = DemoStepHandler.STATUS_SUCCEEDED;
+      publisher.succeed(result);
     }
     return response;
   }

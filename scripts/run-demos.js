@@ -5,7 +5,9 @@
  * records written by the Demo_Step__e trigger and exports the measured metrics.
  *
  * Usage: node scripts/run-demos.js --target-org <alias> [--demo Limits_Probe] [--volume 150]
- *                                  [--out scripts/out] [--timeout 90]
+ *                                  [--chaos-demo Async_Chain_Break[,Other]] [--out scripts/out] [--timeout 90]
+ * --chaos-demo also runs the listed demos in BEFORE and AFTER mode with Chaos on. Runs that no job closes
+ * (silent asynchronous failures) are handed to the demo monitor once the queueable jobs are done.
  * Writes <out>/metrics.json and <out>/metrics.md; appends the table to $GITHUB_STEP_SUMMARY when set.
  */
 const crypto = require("node:crypto");
@@ -18,7 +20,13 @@ const {
   toMarkdown,
   parseArgs
 } = require("./lib/report");
-const { recordUncaughtFailure, waitForRuns } = require("./lib/runs");
+const {
+  recordUncaughtFailure,
+  pollRuns,
+  waitForRuns,
+  waitForAsyncJobs,
+  monitorRun
+} = require("./lib/runs");
 
 function loadDemos(targetOrg, onlyDemo) {
   const settings = query(
@@ -51,32 +59,52 @@ async function main() {
     throw new Error("No active demo found");
   }
 
+  const chaosDemos = String(args["chaos-demo"] || "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
   const planned = [];
   for (const demo of demos) {
     const volume = Number(
       args.volume || demo.Max_Volume__c || demo.Default_Volume__c
     );
-    for (const mode of ["BEFORE", "AFTER"]) {
+    const variants = [false];
+    if (chaosDemos.includes(demo.DeveloperName)) {
+      variants.push(true);
+    }
+    for (const [chaos, mode] of variants.flatMap((c) =>
+      ["BEFORE", "AFTER"].map((m) => [c, m])
+    )) {
       const run = {
         demo: demo.DeveloperName,
         mode,
         volume,
         runKey: crypto.randomUUID(),
-        chaos: false
+        chaos
       };
       const outcome = executeRun(run, targetOrg);
       console.log(
-        `${run.demo} ${mode} volume=${volume}: ${outcome.success ? "completed" : `failed (${outcome.message})`}`
+        `${run.demo} ${mode}${chaos ? " + chaos" : ""} volume=${volume}: ${outcome.success ? "completed" : `failed (${outcome.message})`}`
       );
       planned.push(run);
     }
   }
 
-  const ordered = await waitForRuns(
-    planned.map((run) => run.runKey),
+  const runKeys = planned.map((run) => run.runKey);
+  await waitForAsyncJobs(targetOrg, 600);
+  const { missing } = await pollRuns(
+    runKeys,
     targetOrg,
     Number(args.timeout || 90)
   );
+  for (const run of planned.filter((item) => missing.includes(item.runKey))) {
+    // Nobody closed this run: ask the demo monitor (a silent asynchronous failure is closed as FAILED).
+    const response = monitorRun(run, targetOrg);
+    console.log(
+      `${run.demo} ${run.mode}${run.chaos ? " + chaos" : ""}: monitoring says ${response?.status}`
+    );
+  }
+  const ordered = await waitForRuns(runKeys, targetOrg, 60);
   const markdown = toMarkdown(ordered, {
     title: "Demo metrics (measured in the org)",
     commit: process.env.GITHUB_SHA,
