@@ -109,6 +109,35 @@ jobs:
           echo "::add-mask::$url"
           SF_FRONTDOOR_URL="$url" SCREENSHOT_ROOT=docs/screenshots npx playwright test
 
+      # Proof of the deployment guard: an org change made outside Git must block the next deployment.
+      - name: Drift and deployment guard
+        env:
+          GIT_COMMITTER_NAME: ci
+          GIT_COMMITTER_EMAIL: ci@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          mkdir -p scripts/out
+          node tools/freshness.js --target-org ci
+          node tools/baseline.js --target-org ci
+          node tools/deploy.js --target-org ci --dry-run
+
+          # A hotfix deployed straight from a workspace, never committed
+          file=force-app/core/main/default/classes/DemoCatalog.cls
+          echo '// Hotfix applied directly in the org' >> "$file"
+          sf project deploy start --source-dir "$file" --target-org ci --wait 10 > /dev/null
+          git checkout -- "$file"
+
+          set +e
+          node tools/drift.js --target-org ci --out scripts/out
+          drift=$?
+          node tools/deploy.js --target-org ci --out scripts/out
+          guard=$?
+          set -e
+          echo "drift exit=$drift, deploy exit=$guard (2 expected for both)"
+          test "$drift" -eq 2
+          test "$guard" -eq 2
+          jq -e '.rows[] | select(.component == "ApexClass:DemoCatalog" and .drift == "UNKNOWN")' scripts/out/drift.json
+
       - name: Convert recordings to GIF
         if: always()
         run: |

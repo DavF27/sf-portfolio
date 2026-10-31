@@ -281,12 +281,17 @@ Correctif issu de la CI : au lancement, la stratégie annonçait tout le stock c
 
 Réécriture générique (aucun code client copié) :
 
-- [ ] **Fraîcheur** : prouver que la version locale d'un composant est identique à l'org avant analyse (statut `fresh`/`stale`/`missing`).
-- [ ] **Drift** : classer les écarts org ↔ Git (connu / intentionnel / inconnu + auteur et date de la modification dans l'org).
-- [ ] **Garde de déploiement** : refuser d'écraser un composant modifié dans l'org depuis la dernière récupération ; tag Git du déploiement.
-- [ ] Tests automatisés des scripts dans la CI.
+- [x] **Fraîcheur** (`tools/freshness.js`) : empreinte SHA-256 normalisée de la copie locale contre l'org lue par l'API Tooling
+      (statut `fresh`/`stale`/`missing`). Périmètre : Apex et LWC, restitués octet pour octet par l'org (93/93 identiques sur la vitrine).
+- [x] **Drift** (`tools/drift.js`) : référence = contenu au dernier tag `deploy/<alias>/<date>` ; écarts classés `KNOWN` /
+      `INTENTIONAL` (`tools/drift-exceptions.json`, raison obligatoire) / `UNKNOWN`, avec auteur et date de la modification dans l'org.
+- [x] **Garde de déploiement** (`tools/deploy.js`) : code 2 si `UNKNOWN`, `--force --reason` tracé dans le tag, arbre propre exigé ;
+      tag annoté `deploy/<alias>/<date>` après succès. `tools/baseline.js` adopte une org déjà déployée (tag seulement si tout est `fresh`).
+- [x] Tests automatisés des scripts dans la CI : `npm run test:scripts` couvre `scripts/` et `tools/` (39 tests, matrice L / O / B,
+      lecture d'un tag dans un dépôt Git temporaire). Fiche [docs/demos/drift-guard.md](docs/demos/drift-guard.md).
 
-**Preuve :** démo enregistrée — modification directe dans l'org vitrine → drift `UNKNOWN` → déploiement bloqué.
+**Preuve :** étape CI _Drift and deployment guard_ en scratch org — tag de référence, hotfix déployé hors Git sur `DemoCatalog`,
+drift `UNKNOWN` (code 2), déploiement bloqué (code 2) ; rapports `drift.md` / `deploy-guard.md` en artefact (à compléter après le run).
 
 ### Phase 7 — Publication
 

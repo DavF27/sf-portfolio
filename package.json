@@ -5,16 +5,19 @@
   "description": "Executable Salesforce demonstrations: each demo has a failing BEFORE mode and a passing AFTER mode, measured in the org.",
   "license": "MIT",
   "scripts": {
-    "lint": "eslint \"force-app/**/lwc/**/*.js\" \"scripts/**/*.js\" \"e2e/**/*.js\"",
+    "lint": "eslint \"force-app/**/lwc/**/*.js\" \"scripts/**/*.js\" \"e2e/**/*.js\" \"tools/**/*.js\"",
     "test": "npm run test:unit && npm run test:scripts",
     "test:unit": "sfdx-lwc-jest",
     "test:unit:coverage": "sfdx-lwc-jest --coverage",
-    "test:scripts": "node --test \"scripts/**/*.test.js\"",
+    "test:scripts": "node --test \"scripts/**/*.test.js\" \"tools/**/*.test.js\"",
     "test:e2e": "playwright test",
     "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
     "prettier:verify": "prettier --check \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
     "seed": "node scripts/seed.js",
-    "demos": "node scripts/run-demos.js"
+    "demos": "node scripts/run-demos.js",
+    "drift": "node tools/drift.js",
+    "freshness": "node tools/freshness.js",
+    "deploy:guarded": "node tools/deploy.js"
   },
   "devDependencies": {
     "@lwc/eslint-plugin-lwc": "^3.1.0",

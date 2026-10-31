@@ -64,4 +64,20 @@ function query(soql, targetOrg) {
   return json.result.records;
 }
 
-module.exports = { sf, runAnonymousApex, query };
+function toolingQuery(soql, targetOrg) {
+  const json = sf([
+    "data",
+    "query",
+    "--use-tooling-api",
+    "--query",
+    soql,
+    "--target-org",
+    targetOrg
+  ]);
+  if (json.status !== 0) {
+    throw new Error(json.message || "Tooling query failed");
+  }
+  return json.result.records;
+}
+
+module.exports = { sf, runAnonymousApex, query, toolingQuery };

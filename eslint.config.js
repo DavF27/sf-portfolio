@@ -34,7 +34,7 @@ module.exports = defineConfig([
     extends: ["eslintJs/recommended"]
   },
   {
-    files: ["scripts/**/*.js", "e2e/**/*.js", "*.config.js"],
+    files: ["scripts/**/*.js", "tools/**/*.js", "e2e/**/*.js", "*.config.js"],
     languageOptions: {
       sourceType: "commonjs",
       ecmaVersion: "latest",
