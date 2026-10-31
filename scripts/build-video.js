@@ -4,6 +4,7 @@
  * Cuts the 2-3 minute showcase video from the Playwright recordings of a CI proof artifact: a title card per demo
  * with its measured BEFORE/AFTER headline, then the recording sped up. Silent, ready for a voice-over.
  *   node scripts/build-video.js --proof <artifact dir> --out <file.mp4>
+ * Needs ffmpeg with drawtext on the PATH (or FFMPEG=<path>) and a TrueType font (or VIDEO_FONT=<path>).
  */
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
@@ -25,16 +26,19 @@ const FONTS = [
   "C:/Windows/Fonts/arial.ttf"
 ];
 
+/** ffmpeg from FFMPEG or the PATH; the title cards need the drawtext filter (libfreetype). */
 function ffmpegPath() {
-  try {
-    const bundled = require("ffmpeg-static");
-    if (bundled && fs.existsSync(bundled)) {
-      return bundled;
-    }
-  } catch {
-    // Fall back to the ffmpeg on the PATH.
+  const ffmpeg = process.env.FFMPEG || "ffmpeg";
+  const filters = spawnSync(ffmpeg, ["-hide_banner", "-filters"], {
+    encoding: "utf8"
+  });
+  if (filters.status !== 0) {
+    throw new Error(`ffmpeg not found (${ffmpeg}): install it or set FFMPEG.`);
   }
-  return "ffmpeg";
+  if (!/\sdrawtext\s/.test(filters.stdout)) {
+    throw new Error(`${ffmpeg} has no drawtext filter (needs libfreetype).`);
+  }
+  return ffmpeg;
 }
 
 function run(ffmpeg, args, cwd) {
