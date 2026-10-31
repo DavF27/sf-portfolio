@@ -167,8 +167,58 @@ jobs:
             test-results/
             docs/screenshots/
             playwright-report/
+            !test-results/e2e-session.json
           if-no-files-found: warn
 
       - name: Delete scratch org
         if: always()
         run: sf org delete scratch --target-org ci --no-prompt || true
+
+  # Showcase site and video built from the proof of this run. GitHub Pages needs a public repository on a free plan.
+  pages:
+    name: Publish showcase
+    needs: scratch-org
+    if: github.ref == 'refs/heads/main' && github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: proof-${{ github.sha }}
+          path: proof
+
+      - name: Previous history
+        run: |
+          curl -fsSL "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/history.json" -o history.json \
+            || echo '[]' > history.json
+
+      - name: Build video
+        run: |
+          test -f /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf || sudo apt-get install -y fonts-dejavu-core > /dev/null
+          node scripts/build-video.js --proof proof --out video/portfolio.mp4
+
+      - name: Build site
+        run: node scripts/build-site.js --proof proof --out _site --history history.json --video video/portfolio.mp4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -17,10 +17,10 @@ un état « après » qui réussit, et des métriques mesurées dans l'org.
 
 ## Environnements
 
-| Rôle                 | Org                                                                         | Usage                                                |
-| -------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Vitrine + Dev Hub    | Developer Edition `<my-domain>` (alias à créer : `portfolio`) | Démo en direct, vidéo, création des scratch orgs     |
-| Preuve reproductible | Scratch org éphémère créée par la CI                                        | Rejoue déploiement + tests + métriques à chaque push |
+| Rôle                 | Org                                                                            | Usage                                                |
+| -------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Vitrine + Dev Hub    | Developer Edition (domaine My Domain non publié) (alias à créer : `portfolio`) | Démo en direct, vidéo, création des scratch orgs     |
+| Preuve reproductible | Scratch org éphémère créée par la CI                                           | Rejoue déploiement + tests + métriques à chaque push |
 
 Contraintes de plateforme :
 
@@ -305,11 +305,16 @@ la CI ne se déclenche plus sur les tags (`push.branches`), qui ne portent pas d
 
 ### Phase 7 — Publication
 
-- [ ] README principal : une ligne par démo (problème, mécanisme, lien vers la fiche, badge CI).
-- [ ] Une fiche par cas dans `docs/` : contexte anonymisé → symptôme → hypothèse et preuve → cause racine → solution (schéma Mermaid) → résultat mesuré → compétences.
-- [ ] Vidéo de 2 à 3 minutes (panneau LWC, avant/après), montée à partir des GIF de la CI et commentée.
-- [ ] Page GitHub Pages publiée (GIF, captures, métriques, historique).
-- [ ] Relecture anonymisation (aucun nom de client, d'objet, de ticket, d'Id, de personne).
+- [x] README principal (anglais) : une ligne par démo (problème, mécanisme, lien vers la fiche, badge CI). Les chiffres y sont des
+      cartes SVG servies par Pages et régénérées par la CI (`scripts/lib/site-data.js`) : aucun chiffre écrit à la main.
+- [x] Une fiche par cas dans `docs/demos/` (français), dont la fiche Bulk ajoutée en Phase 7 : : contexte anonymisé → symptôme → hypothèse et preuve → cause racine → solution (schéma Mermaid) → résultat mesuré → compétences.
+- [x] Vidéo (`scripts/build-video.js`, environ 1 min 50) montée par la CI à partir des enregistrements Playwright : un carton par démo
+      avec les chiffres mesurés, puis l'enregistrement accéléré 1,5 fois. Muette : la voix off reste à poser.
+- [ ] Page GitHub Pages (`scripts/build-site.js`, job CI _Publish showcase_) : accueil, une page par démo (fiche rendue avec Mermaid,
+      GIF, captures, runs mesurés, tendance des durées), historique des runs. Construite et vérifiée en local ; publiée quand le dépôt sera public.
+- [ ] Relecture anonymisation (aucun nom de client, d'objet, de ticket, d'Id, de personne). Version actuelle propre ; l'historique contient
+      la Consumer Key, l'utilisateur du Dev Hub, le domaine de la vitrine, un chemin local et l'email perso : réécriture `git filter-repo`
+      (placeholders, email noreply) avant le passage en public. L'artefact de CI n'embarque plus la session Playwright (`e2e-session.json`).
 - [ ] Liens vers certifications et profil Trailhead ; demander une recommandation LinkedIn à un manager ou à un Business Analyst.
 
 ## Définition de « terminé » pour une démo
