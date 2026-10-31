@@ -145,7 +145,7 @@ Le portfolio doit **se voir**, pas seulement se lire. Principe : les visuels son
 - [x] Générateur de données synthétiques paramétrable (volume) : `SyntheticDataGenerator` (déterministe), interface `DemoDataSeeder`, `scripts/seed.js`.
 - [x] Définition de scratch org `config/project-scratch-def.json`.
 - [x] CI : authentification JWT au Dev Hub (secret GitHub) → scratch org → déploiement → tests Apex + Jest → export des métriques en artefact et dans le résumé du job → suppression de la scratch org.
-      _Run [40883713530](https://github.com/DavF27/sf-portfolio/actions/runs/40883713530) (commit `c42022e`, 2026-10-29) : 46 tests Apex, 100 % de réussite, couverture 97 % ; scratch org créée puis supprimée. Contrainte : depuis Spring '26, la création de scratch org échoue en `C-1016` avec une app propre au Dev Hub (ECA ou Connected App) ; contournement officiel `SF_SCRATCH_SIGNUP_CONNECTED_APP=PlatformCLI` (voir [docs/ci-setup.md](docs/ci-setup.md))._
+      _Run [40883713530](https://github.com/DavF27/sf-portfolio/actions/runs/40883713530) (commit `884dc9f`, 2026-10-29) : 46 tests Apex, 100 % de réussite, couverture 97 % ; scratch org créée puis supprimée. Contrainte : depuis Spring '26, la création de scratch org échoue en `C-1016` avec une app propre au Dev Hub (ECA ou Connected App) ; contournement officiel `SF_SCRATCH_SIGNUP_CONNECTED_APP=PlatformCLI` (voir [docs/ci-setup.md](docs/ci-setup.md))._
 
 - [x] Instrumentation commune : événement `Demo_Step__e` (Platform Event) publié par chaque étape, consommé par le panneau (`empApi`).
 - [x] Composants visuels réutilisables : jauges de limites, frise chronologique, barres de progression.
@@ -157,7 +157,7 @@ Le portfolio doit **se voir**, pas seulement se lire. Principe : les visuels son
 
 État au 2026-10-29 : CI verte de bout en bout. Défauts relevés sur les premières captures et corrigés : jauge DML « / 1 » (`getLimits` était `cacheable=true`, contexte en lecture seule où la plateforme annonce une limite DML de 1 ; désormais appel impératif, puis limites de la transaction du run) ; barre utilitaire figée au milieu des captures pleine page (masquée par géométrie avant capture) ; durée des runs en échec non intercepté écrasée par les horodatages des événements, précis à la seconde (désormais en dernier recours seulement).
 
-Vitrine : socle déployé dans `portfolio` le 2026-10-29 (déploiement `0Afak00000qKWQoCAO`, 91 composants, 47 tests Apex, 0 erreur), permission set `Demo_Admin` attribuée ; panneau affiché sur l'onglet _Demo Panel_ (vérifié par chargement headless, sans lancer de démo). Quatrième défaut corrigé au passage : les étapes reçues pendant l'enregistrement d'un échec non intercepté étaient écrasées (`0a16268`, test de non-régression qui échoue sur l'ancien code).
+Vitrine : socle déployé dans `portfolio` le 2026-10-29 (déploiement `0Afak00000qKWQoCAO`, 91 composants, 47 tests Apex, 0 erreur), permission set `Demo_Admin` attribuée ; panneau affiché sur l'onglet _Demo Panel_ (vérifié par chargement headless, sans lancer de démo). Quatrième défaut corrigé au passage : les étapes reçues pendant l'enregistrement d'un échec non intercepté étaient écrasées (`900d122`, test de non-régression qui échoue sur l'ancien code).
 
 **Preuve :** CI verte publique, panneau visible dans la vitrine, première capture générée par la CI.
 
@@ -177,7 +177,7 @@ Mécanisme : un lot Bulk API passe dans une seule transaction de trigger ; une c
 - [x] Tests : 200 contrats APRÈS (succès, coût par tranche de 200), AVANT extrapolé (`LimitException` non interceptable) → rupture avant 50 lignes,
       ligne invalide isolée en APRÈS (199/1) et lot entier en échec en AVANT. 65 tests Apex, couverture 98 %, 100 % sur les classes de la démo.
 
-**Preuve** (CI [40899094782](https://github.com/DavF27/sf-portfolio/actions/runs/40899094782), commit `e9d8ebd`) :
+**Preuve** (CI [40899094782](https://github.com/DavF27/sf-portfolio/actions/runs/40899094782), commit `e34f84c`) :
 
 | Chemin                                     | Lignes | AVANT                                                                        | APRÈS                     | APRÈS + Chaos                               |
 | ------------------------------------------ | -----: | ---------------------------------------------------------------------------- | ------------------------- | ------------------------------------------- |
@@ -187,7 +187,7 @@ Mécanisme : un lot Bulk API passe dans une seule transaction de trigger ; une c
 Captures `docs/screenshots/bulk-all-or-nothing/` (`before.png`, `after.png`, `chaos.png`, GIF) dans l'artefact `proof-<sha>`.
 Vitrine : déployée dans `portfolio` le 2026-10-29 (`0Afak00000qKii7CAC`, 131 composants, 65 tests), permission set `Demo_Bulk` attribuée.
 
-Corrections vérifiées par la CI [41035719990](https://github.com/DavF27/sf-portfolio/actions/runs/41035719990) (commit `86bf23e`) :
+Corrections vérifiées par la CI [41035719990](https://github.com/DavF27/sf-portfolio/actions/runs/41035719990) (commit `12b173b`) :
 `chaos.png` correcte, description complète, erreurs résumées dans le tableau des runs.
 
 ### Phase 3 — Démo « Ordre d'exécution trigger / flow »
@@ -207,7 +207,7 @@ manque les valeurs calculées par le flow.
       ordre des étapes vérifié. Validation check-only dans `portfolio` : **81 tests Apex, 0 échec**.
 - [x] Fiche [docs/demos/order-of-execution.md](docs/demos/order-of-execution.md) avec les schémas Mermaid AVANT/APRÈS.
 
-**Preuve** (CI [41035719990](https://github.com/DavF27/sf-portfolio/actions/runs/41035719990), commit `86bf23e`, 81 tests Apex) :
+**Preuve** (CI [41035719990](https://github.com/DavF27/sf-portfolio/actions/runs/41035719990), commit `12b173b`, 81 tests Apex) :
 
 | Mode  | Volume | Run                             | Photos incomplètes | SOQL | DML |
 | ----- | -----: | ------------------------------- | -----------------: | ---: | --: |
@@ -234,7 +234,7 @@ sans erreur visible, le groupe reste bloqué dans un état intermédiaire.
       sans séquence (ordre d'arrivée).
 - [x] Tests : 109 tests Apex (couverture 98,8 %), 34 tests Jest, 21 tests de scripts. Fiche [docs/demos/async-chain-break.md](docs/demos/async-chain-break.md).
 
-**Preuve** (CI [41045565063](https://github.com/DavF27/sf-portfolio/actions/runs/41045565063), commit `cb87693`, 110 tests Apex) :
+**Preuve** (CI [41045565063](https://github.com/DavF27/sf-portfolio/actions/runs/41045565063), commit `7f40c94`, 110 tests Apex) :
 
 | Mode  | Chaos | Lignes | Run          | Lignes en échec | Comment le run est fermé                                                                                      |
 | ----- | ----- | -----: | ------------ | --------------: | ------------------------------------------------------------------------------------------------------------- |
@@ -264,7 +264,7 @@ Mécanisme : un batch parcourt tout le stock et filtre en Apex, record par recor
 - [x] Visuel : bouton _Race_ (interface `DemoRaceable`), composant `raceLanes` (progression, chronomètre, exécutions, premier arrivé).
 - [x] Tests : 122 tests Apex, 41 tests Jest, 22 tests de scripts. Fiche [docs/demos/batch-filter.md](docs/demos/batch-filter.md).
 
-**Preuve (CI verte, run 41054955308, commit `89a7fe8`, scratch org, 1 000 contrats par couloir) :**
+**Preuve (CI verte, run 41054955308, commit `cf9df34`, scratch org, 1 000 contrats par couloir) :**
 
 | Mode                            | Exécutions (`JobItemsProcessed`) | Durée jusqu'au `finish` | Avis envoyés |
 | ------------------------------- | -------------------------------: | ----------------------: | -----------: |
@@ -290,7 +290,7 @@ Réécriture générique (aucun code client copié) :
 - [x] Tests automatisés des scripts dans la CI : `npm run test:scripts` couvre `scripts/` et `tools/` (39 tests, matrice L / O / B,
       lecture d'un tag dans un dépôt Git temporaire). Fiche [docs/demos/drift-guard.md](docs/demos/drift-guard.md).
 
-**Preuve (CI verte, run 41207932266, commit `8cc4a84`, étape _Drift and deployment guard_ en scratch org) :**
+**Preuve (CI verte, run 41207932266, commit `210f798`, étape _Drift and deployment guard_ en scratch org) :**
 
 1. `freshness` : 93/93 composants à jour ; `baseline` pose `deploy/ci/20261031-140738` ; `deploy --dry-run` autorisé ;
 2. hotfix déployé hors Git sur `DemoCatalog`, puis annulé dans la copie de travail ;
