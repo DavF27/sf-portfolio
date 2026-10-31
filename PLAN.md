@@ -290,8 +290,18 @@ Réécriture générique (aucun code client copié) :
 - [x] Tests automatisés des scripts dans la CI : `npm run test:scripts` couvre `scripts/` et `tools/` (39 tests, matrice L / O / B,
       lecture d'un tag dans un dépôt Git temporaire). Fiche [docs/demos/drift-guard.md](docs/demos/drift-guard.md).
 
-**Preuve :** étape CI _Drift and deployment guard_ en scratch org — tag de référence, hotfix déployé hors Git sur `DemoCatalog`,
-drift `UNKNOWN` (code 2), déploiement bloqué (code 2) ; rapports `drift.md` / `deploy-guard.md` en artefact (à compléter après le run).
+**Preuve (CI verte, run 41207932266, commit `8cc4a84`, étape _Drift and deployment guard_ en scratch org) :**
+
+1. `freshness` : 93/93 composants à jour ; `baseline` pose `deploy/ci/20261031-140738` ; `deploy --dry-run` autorisé ;
+2. hotfix déployé hors Git sur `DemoCatalog`, puis annulé dans la copie de travail ;
+3. `drift` : 92 à jour, `ApexClass:DemoCatalog` **UNKNOWN** (modifiée le 2026-10-31T14:07:48Z par l'utilisateur de la scratch org), code 2 ;
+4. `deploy` : _Deployment blocked_, code 2. Rapports `drift.md` et `deploy-guard.md` en artefact et dans le résumé du job.
+
+Vitrine : tag de référence `deploy/portfolio/20261031-135634` posé par `baseline.js` (93 composants à jour) et poussé.
+Les prochains déploiements de `portfolio` passent par `node tools/deploy.js --target-org portfolio`.
+
+Correctifs issus de la CI : Jest ignorait `scripts/` mais pas `tools/` (tests `node:test` exécutés par Jest) ;
+la CI ne se déclenche plus sur les tags (`push.branches`), qui ne portent pas de code nouveau.
 
 ### Phase 7 — Publication
 
