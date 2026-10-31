@@ -6,7 +6,8 @@ module.exports = {
   testPathIgnorePatterns: [
     "<rootDir>/node_modules/",
     "<rootDir>/e2e/",
-    "<rootDir>/scripts/"
+    "<rootDir>/scripts/",
+    "<rootDir>/tools/"
   ],
   moduleNameMapper: {
     "^lightning/empApi$": "<rootDir>/jest-mocks/lightning/empApi"

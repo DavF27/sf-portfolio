@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    # deploy/<alias>/<date> tags record deployments: they carry no new code to test.
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
 
