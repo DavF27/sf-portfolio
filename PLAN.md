@@ -55,6 +55,10 @@ Contraintes découvertes en Phase 2 (mesurées, preuves dans la CI) :
 - Developer Edition : **10 000 livraisons de Platform Events par jour** (`DailyDeliveredPlatformEvents`, mesuré) : les batchs publient
   leur progression par paliers (20 étapes par run au plus) ;
 - un test Apex n'exécute qu'un seul `execute()` par `Database.executeBatch` : un batch à lot de 1 est rejoué start / execute / finish ;
+- `ADDMONTHS` (formule) ramène un **dernier jour de mois** au dernier jour du mois d'arrivée, `Date.addMonths` non : le 28 février 2025
+  - 36 mois donne le 29 février 2028 d'un côté, le 28 de l'autre. Le jeu de données dépendant de la date du jour, le cas est apparu en CI
+    le 2026-11-01 : aucune date de début ne tombe plus un dernier jour de mois (test d'invariant). Correctif déployé dans `portfolio` par
+    `tools/deploy.js` (garde : 2 composants en attente, 0 drift ; tag `deploy/portfolio/20261101-150949`) ;
 - un champ formule ne peut pas être affecté en Apex, même en mémoire : construire l'enregistrement par `JSON.deserialize` dans les tests ;
 - l'URL _frontdoor_ de `sf org open --url-only` est **à usage unique** : Playwright se connecte une fois (global setup) et réutilise la session ;
 - quota de scratch orgs atteint le 2026-10-29 (6 créations) : regrouper les push qui déclenchent la CI. Mesuré le 2026-10-30 à 10 h 43 :
