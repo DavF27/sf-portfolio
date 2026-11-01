@@ -310,12 +310,30 @@ la CI ne se déclenche plus sur les tags (`push.branches`), qui ne portent pas d
 - [x] Une fiche par cas dans `docs/demos/` (français), dont la fiche Bulk ajoutée en Phase 7 : : contexte anonymisé → symptôme → hypothèse et preuve → cause racine → solution (schéma Mermaid) → résultat mesuré → compétences.
 - [x] Vidéo (`scripts/build-video.js`, environ 1 min 50) montée par la CI à partir des enregistrements Playwright : un carton par démo
       avec les chiffres mesurés, puis l'enregistrement accéléré 1,5 fois. Muette : la voix off reste à poser.
-- [ ] Page GitHub Pages (`scripts/build-site.js`, job CI _Publish showcase_) : accueil, une page par démo (fiche rendue avec Mermaid,
-      GIF, captures, runs mesurés, tendance des durées), historique des runs. Construite et vérifiée en local ; publiée quand le dépôt sera public.
-- [ ] Relecture anonymisation (aucun nom de client, d'objet, de ticket, d'Id, de personne). Version actuelle propre ; l'historique contient
-      la Consumer Key, l'utilisateur du Dev Hub, le domaine de la vitrine, un chemin local et l'email perso : réécriture `git filter-repo`
-      (placeholders, email noreply) avant le passage en public. L'artefact de CI n'embarque plus la session Playwright (`e2e-session.json`).
-- [ ] Liens vers certifications et profil Trailhead ; demander une recommandation LinkedIn à un manager ou à un Business Analyst.
+- [x] Page GitHub Pages <https://davf27.github.io/sf-portfolio/> (`scripts/build-site.js`, job CI _Publish showcase_, seulement sur `main`
+      et dépôt public) : accueil, une page par démo (fiche rendue avec Mermaid, GIF, captures, runs mesurés, tendance des durées),
+      historique des runs (`history.json` relu à chaque publication), cartes SVG reprises par le README, vidéo.
+- [x] Relecture anonymisation : version actuelle et historique complet (contenus, messages, auteurs, tags) passés au crible.
+      Historique réécrit le 2026-10-31 par `git filter-repo` (Consumer Key, utilisateur du Dev Hub, domaine de la vitrine et chemin local
+      remplacés par des placeholders ; email des commits → adresse noreply GitHub), push forcé, 20 anciens runs et leurs artefacts supprimés,
+      puis dépôt **public**. Sauvegarde de l'ancien historique hors dépôt (`c:\dev\sf-portfolio-backup-20261031.git`, à supprimer une fois
+      la publication validée). L'artefact de CI n'embarque plus la session Playwright (`e2e-session.json`).
+- [ ] Liens vers certifications et profil Trailhead (à fournir) ; demander une recommandation LinkedIn à un manager ou à un Business Analyst.
+- [ ] Voix off sur la vidéo (optionnel).
+
+**Preuve :** CI publique verte, run [41248178585](https://github.com/DavF27/sf-portfolio/actions/runs/41248178585) (commit `69469c6`) :
+preuve en scratch org puis publication du site (pages, cartes, vidéo de 2 Mo, `history.json` avec ce premier run public).
+Les liens vers les runs cités dans les phases précédentes sont morts depuis la suppression des anciens runs ; les SHA cités ont été
+remappés sur l'historique réécrit.
+
+Contraintes découvertes :
+
+- le ffmpeg statique Linux du paquet npm `ffmpeg-static` n'a pas le filtre `drawtext` (celui de Windows l'a) : la vidéo utilise le ffmpeg
+  du système (`apt-get install ffmpeg`), ou `FFMPEG=<chemin>` en local ;
+- après un push forcé, GitHub garde les anciens commits accessibles par SHA (et les runs y renvoient) : supprimer les runs, et pour une purge
+  complète recréer le dépôt ou passer par le support GitHub ;
+- un push de tag déclenche les workflows **tels qu'ils étaient au commit tagué** : le filtre `push.branches` n'agit qu'à partir des commits qui le contiennent ;
+- GitHub Pages sur un compte gratuit exige un dépôt public ; le job de publication teste `github.event.repository.private`.
 
 ## Définition de « terminé » pour une démo
 
