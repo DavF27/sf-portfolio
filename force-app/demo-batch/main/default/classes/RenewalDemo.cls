@@ -58,9 +58,14 @@ public with sharing class RenewalDemo {
         deadline = today.addDays(-30 - generator.nextInt(400));
       }
       Date startDate = deadline.addDays(notice).addMonths(-term);
-      // Keep start dates off month ends, where ADDMONTHS and Date.addMonths disagree.
-      if (startDate.day() > 28) {
-        startDate = startDate.addDays(28 - startDate.day());
+      // Keep start dates off month ends: ADDMONTHS maps a last day of month to the last day of the target month,
+      // Date.addMonths does not (e.g. 28 Feb 2025 + 36 months: 29 Feb 2028 vs 28 Feb 2028).
+      Integer lastSafeDay = Math.min(
+        28,
+        Date.daysInMonth(startDate.year(), startDate.month()) - 1
+      );
+      if (startDate.day() > lastSafeDay) {
+        startDate = startDate.addDays(lastSafeDay - startDate.day());
       }
       String key = renewalKey(lane, row);
       keys.add(key);

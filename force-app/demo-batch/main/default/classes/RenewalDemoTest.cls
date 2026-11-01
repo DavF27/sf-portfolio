@@ -48,6 +48,12 @@ private class RenewalDemoTest {
       Date today = Date.today();
       Integer due = 0;
       for (Renewal_Demo__c renewal : renewals) {
+        Date start = renewal.Start_Date__c;
+        Assert.isTrue(
+          start.day() < Date.daysInMonth(start.year(), start.month()),
+          'Start dates never fall on a month end, where ADDMONTHS differs: ' +
+          renewal.External_Id__c
+        );
         Assert.areEqual(
           renewal.Start_Date__c
             .addMonths(renewal.Term_Months__c.intValue())
