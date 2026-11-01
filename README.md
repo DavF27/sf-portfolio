@@ -98,6 +98,11 @@ e2e/             Playwright recordings of the panel
 docs/demos/      one write-up per demo (French)
 ```
 
+## Author
+
+David Francisco — Salesforce developer. Certifications and Trailhead badges:
+[Trailblazer profile](https://www.salesforce.com/trailblazer/davfrancisco).
+
 ## License
 
 [MIT](LICENSE)

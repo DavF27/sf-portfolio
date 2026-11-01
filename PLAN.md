@@ -318,7 +318,8 @@ la CI ne se déclenche plus sur les tags (`push.branches`), qui ne portent pas d
       remplacés par des placeholders ; email des commits → adresse noreply GitHub), push forcé, 20 anciens runs et leurs artefacts supprimés,
       puis dépôt **public**. Sauvegarde de l'ancien historique hors dépôt (`c:\dev\sf-portfolio-backup-20261031.git`, à supprimer une fois
       la publication validée). L'artefact de CI n'embarque plus la session Playwright (`e2e-session.json`).
-- [ ] Liens vers certifications et profil Trailhead (à fournir) ; demander une recommandation LinkedIn à un manager ou à un Business Analyst.
+- [x] Lien vers le profil Trailblazer (certifications et badges) dans le README et sur le site (navigation et accueil).
+- [ ] Demander une recommandation LinkedIn à un manager ou à un Business Analyst ; ajouter le lien LinkedIn si souhaité.
 - [ ] Voix off sur la vidéo (optionnel).
 
 **Preuve :** CI publique verte, run [41248178585](https://github.com/DavF27/sf-portfolio/actions/runs/41248178585) (commit `69469c6`) :
